@@ -41,8 +41,6 @@ st.sidebar.title("Settings")
 if page == "Grocery List Maker":
     st.title("Grocery List Maker! A La Esh!")
     # st.sidebar.title("Settings")
-    st.write(RecipeDict)
-    st.write(IngredientDict)
     with st.expander('Choose recipes and portions'):
         for recipe in RecipeDict:
             # st.session_state.pop(f'portion_{recipe}', None)
