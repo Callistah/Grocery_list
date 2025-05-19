@@ -50,11 +50,13 @@ if page == "Grocery List Maker":
     for recipe_name, group in grouped:
         ingredientsRecipe = {}
         for _, row in group.iterrows():
-            ingredient = row['ingredient']
+            ingredient = row['ingredient'].replace(" ", "").upper()#row['ingredient']
             amount = row['amount']
             unit = row['unit']
             ingredientsRecipe[ingredient] = {'amount': amount, 'unit': unit}
         st.write(recipe_name, ingredientsRecipe)
+        print("Attempting to add recipe:", recipe_name)
+        print("With ingredients:", list(ingredientsRecipe.keys()))
         Recipe(recipe_name, ingredientsRecipe)
     st.write(RecipeDict)
 
