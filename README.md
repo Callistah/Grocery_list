@@ -271,7 +271,7 @@ else:
     st.write(caption)#st.caption(f'Select ingredients from dropdown above. Hover for details.')
 ```
 ### Results
-![Visualization of Portions per Recipe over Time](Grocery_list\Images\Portions_Recipe_Time.png)
+![Visualization of Portions per Recipe over Time](Images\Portions_Recipe_Time.png)
 
 *Line graph visualizing the amount of portions for each recipe.*
 ### Insights
@@ -326,11 +326,11 @@ else:
     st.write(caption)
 ```
 ### Results
-![Visualization of Popularity Recipes](Grocery_list\Images\Popularity_Recipe.png)
+![Visualization of Popularity Recipes](Images\Popularity_Recipe.png)
 
 *Plot graph visualizing the correlation between the frequency - average amount of portions - amount of ingredients*
 
-![Visualization of Average Portions per Logging](Grocery_list\Images\AvgPortion_Recipe.png)
+![Visualization of Average Portions per Logging](Images\AvgPortion_Recipe.png)
 *Plot graph visualizing the correlation between the frequency - average amount of portions*
 
 ### Insights:
@@ -381,7 +381,7 @@ else:
     st.write(caption)
 ```
 
-![Visualization of Unique Ingredients](Grocery_list\Images\Unique_ingredients_recipe.png)
+![Visualization of Unique Ingredients](Images\Unique_ingredients_recipe.png)
 *Bar graph of top recipes with most unique ingredients*
 
 ### Insights
@@ -430,7 +430,7 @@ else:
 ```
 
 ### Results
-![Visualize multiple nutritional metrics](Grocery_list\Images\Radarchart.png)
+![Visualize multiple nutritional metrics](Images\Radarchart.png)
 *A radar chart that compares Protein/100kcal - Kcal/Portion - Number of Ingredients - Average Portions*
 
 ### Insights:
@@ -507,7 +507,7 @@ else:
 ```
 
 ### Results
-![Visualize multiple nutritional metrics](Grocery_list\Images\Radarchart.png)
+![Visualize multiple nutritional metrics](Images\Radarchart.png)
 *A radar chart that compares Protein/100kcal - Kcal/Portion - Number of Ingredients - Average Portions*
 
 ### Insights:
