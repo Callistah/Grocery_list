@@ -311,8 +311,11 @@ class Recipe:
             amount = values.get('amount',0)*portion
             unit = values.get('unit',"")
             ingr_key = values.get('name_key')
+            ingr_obj = IngredientDict.get(ing_name.replace(" ", "").upper())
+            label = ingr_obj.getLabel() if ingr_obj else ing_name  # fallback to ing_name if not found
+            
             rows.append({
-                "Ingredient" : ing_name,
+                "Ingredient" : label, #ing_name,
                 "IngredientKey" : ing_name.replace(" ","").upper(),
                 "Amount": amount,
                 "Unit": unit
