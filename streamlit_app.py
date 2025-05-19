@@ -1468,7 +1468,7 @@ elif page == "Data Analysis":
         with tab_comb_by_date:
             grouped_by_date = f_df_combined.groupby("ExportDate")
             
-            for export_date, group in sorted(grouped_by_date):
+            for export_date, group in sorted(grouped_by_date, reverse=True):
                 group_df = (
                 group.groupby(["IngredientLabel", "Unit"], as_index=False)["Amount"]
                 .sum()
@@ -1476,7 +1476,7 @@ elif page == "Data Analysis":
                 )
                 with st.expander(f"Combined ingredients for {export_date.strftime('%B %d, %Y')}", expanded=False):
                     st.dataframe(group_df[["IngredientLabel", "Amount", "Unit"] ].rename(columns={'IngredientLabel':'Ingredient'}).set_index("Ingredient"), use_container_width=True)
-#col_seq=["Ingredient", "Amount", "Unit"] 
+
 
         with tab_sum_all:
             st.dataframe(result_comb_df[["IngredientLabel", "sum", "Unit"]].rename(columns={'IngredientLabel':'Ingredient'}).set_index("Ingredient").rename(columns={'sum':'Sum of Amount'}) , use_container_width=True)
