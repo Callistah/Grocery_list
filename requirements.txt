@@ -1,16 +1,7 @@
 streamlit 
 pandas 
-datetime 
 altair
 plotly
-networkx
-itertools  
-collections
-random  
-Colruty_scraping.colruyt_scraper_price
-colruyt_scraper_price
-datasets
-math
-pathlib
+networkx    
 datasets
 plotly
