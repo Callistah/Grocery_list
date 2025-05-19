@@ -55,8 +55,8 @@ if page == "Grocery List Maker":
             unit = row['unit']
             ingredientsRecipe[ingredient] = {'amount': amount, 'unit': unit}
         st.write(recipe_name, ingredientsRecipe)
-        print("Attempting to add recipe:", recipe_name)
-        print("With ingredients:", list(ingredientsRecipe.keys()))
+        st.write("Attempting to add recipe:", recipe_name)
+        st.write("With ingredients:", list(ingredientsRecipe.keys()))
         Recipe(recipe_name, ingredientsRecipe)
     st.write(RecipeDict)
 
