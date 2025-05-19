@@ -430,7 +430,7 @@ else:
 ```
 
 ### Results
-![Visualize multiple nutritional metrics](Images\Radarchart.png)
+![Visualize multiple nutritional metrics](./Images/Radarchart.png)
 *A radar chart that compares Protein/100kcal - Kcal/Portion - Number of Ingredients - Average Portions*
 
 ### Insights:
@@ -507,7 +507,7 @@ else:
 ```
 
 ### Results
-![Visualize multiple nutritional metrics](Images\Radarchart.png)
+![Visualize multiple nutritional metrics](.\Images\Radarchart.png)
 *A radar chart that compares Protein/100kcal - Kcal/Portion - Number of Ingredients - Average Portions*
 
 ### Insights:
