@@ -173,7 +173,7 @@ class Recipe:
         self.name = name 
         self.ingredientsRecipe = ingredientsRecipe 
         name_key = self.name.replace(" ","").upper()
-
+        
         # Does Recipe have ingredients?
         if not ingredientsRecipe:
             print(f"Recipe '{self.name}' must have at least one ingredient.")
