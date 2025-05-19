@@ -718,6 +718,6 @@ def load_data_from_excel(filepath):
     load_ingredients_from_excel(filepath)
     load_recipes_from_excel(filepath)
  
-load_data_from_excel("Excel_files\data.xlsx") #Grocery_list\Excel_files\data.xlsx
+load_data_from_excel("./Excel_files/data.xlsx") #Grocery_list\Excel_files\data.xlsx
 
 # load_data_from_excel(DATA_FILE) 
