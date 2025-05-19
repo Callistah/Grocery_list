@@ -180,7 +180,8 @@ class Recipe:
             return
         
         for ingredient in ingredientsRecipe:
-                if ingredient.replace(" ","").upper() not in IngredientDict:
+                if ingredient not in IngredientDict:
+                #if ingredient.replace(" ","").upper() not in IngredientDict:
                     print(f"Cannot add recipe. Ingredient '{ingredient}' is not in the global ingredient list.")
                     return
 
