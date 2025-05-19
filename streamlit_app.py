@@ -10,7 +10,7 @@ import networkx as nx
 from itertools import combinations
 from collections import Counter
 import random  
-from Colruty_scraping.colruyt_scraper_price import *
+from Colruyt_scraping.colruyt_scraper_price import *
 
 #CMD: streamlit run Grocery_list\streamlit_app.py
 
