@@ -52,10 +52,10 @@ if page == "Grocery List Maker":
         st.write(recipe_name, group)
         ingredientsRecipe = {}
         for _, row in group.iterrows():
-            st.write(ingredient)
             ingredient = row['ingredient']
             amount = row['amount']
             unit = row['unit']
+            st.write(ingredient)
             ingredientsRecipe[ingredient] = {'amount': amount, 'unit': unit}
         st.write(recipe_name, ingredientsRecipe)
         Recipe(recipe_name, ingredientsRecipe)
