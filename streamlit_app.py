@@ -1462,21 +1462,21 @@ elif page == "Data Analysis":
             for export_date in sorted(recipes_by_date["ExportDate"].unique(), reverse=True):
                 with st.expander(f"Recipes for {export_date.strftime('%B %d, %Y')}", expanded=False):
                     day_data = recipes_by_date[recipes_by_date["ExportDate"] == export_date][["RecipeLabel", "Portion"]]
-                    st.dataframe(day_data.set_index("RecipeLabel"), use_container_width=True)
+                    st.dataframe(day_data.rename(columns={'RecipeLabel':'Recipe'}).set_index("Recipe"), use_container_width=True)
 
 
         with tab_comb_by_date:
             grouped_by_date = f_df_combined.groupby("ExportDate")
             
-            for export_date, group in grouped_by_date:
+            for export_date, group in sorted(grouped_by_date):
                 group_df = (
                 group.groupby(["IngredientLabel", "Unit"], as_index=False)["Amount"]
                 .sum()
                 .sort_values(by="IngredientLabel")
                 )
                 with st.expander(f"Combined ingredients for {export_date.strftime('%B %d, %Y')}", expanded=False):
-                    st.dataframe(group_df[["IngredientLabel", "Amount", "Unit"] ].set_index("IngredientLabel"), use_container_width=True)
+                    st.dataframe(group_df[["IngredientLabel", "Amount", "Unit"] ].rename(columns={'IngredientLabel':'Ingredient'}).set_index("Ingredient"), use_container_width=True)
 #col_seq=["Ingredient", "Amount", "Unit"] 
 
         with tab_sum_all:
-            st.dataframe(result_comb_df[["IngredientLabel", "sum", "Unit"]].set_index("IngredientLabel").rename(columns={'sum':'Sum of Amount'}) , use_container_width=True)
+            st.dataframe(result_comb_df[["IngredientLabel", "sum", "Unit"]].rename(columns={'IngredientLabel':'Ingredient'}).set_index("Ingredient").rename(columns={'sum':'Sum of Amount'}) , use_container_width=True)
