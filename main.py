@@ -8,10 +8,13 @@ from collections import defaultdict
 import pandas as pd
 import math
 from pathlib import Path
-
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "Colruyt_scraping")))
+from colruyt_scraper import get_nutritional_data
 # Use home made scraper to get nutritional value for a product from a link
-from Colruyt_scraping.colruyt_scraper import get_nutritional_data
-from Colruyt_scraping.colruyt_scraper_price import *
+# from Colruyt_scraping.colruyt_scraper import get_nutritional_data
+# from Colruyt_scraping.colruyt_scraper_price import *
 
 BASE_DIR = Path.cwd()
 DATA_FILE = BASE_DIR / "Excel_files" / "data.xlsx"
