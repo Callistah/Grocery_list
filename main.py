@@ -42,6 +42,8 @@ class Ingredient:
         self.name = name 
         self.gramPerUnit = gramPerUnit 
         self.url = url 
+        self.kcal_100g = float(Kcal_100g)
+        self.prot_100g = float(Prot_100g)
         name_key = self.name.replace(" ","").upper()
         self.priceurl = priceurl
         # IngredientDict[name] = self
@@ -51,31 +53,31 @@ class Ingredient:
             print(f'Ingredient {self.name} already exists')
             return
         
-        # Get data from url
-        data = get_nutritional_data(url)
+        # # Get data from url
+        # data = get_nutritional_data(url)
 
-        # URL did not work
-        if data.empty:
-            # If URL fails, check if manual values are usable
-            if not is_number(Kcal_100g) or not is_number(Prot_100g):
-                print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')
-                return
-            #URL didn't work BUT we have manual data
-            self.kcal_100g = float(Kcal_100g)
-            self.prot_100g = float(Prot_100g)
-        #URL works : Get the nutritional data
-        else:
-            try:
-                self.kcal_100g = self.getKcalPer100g(data)
-                self.prot_100g = self.getProtPer100g(data)
-            except Exception as e:
-                print(f'Failed to extract nutritional data from URL for {self.name}: {e}')
-                return 
+        # # URL did not work
+        # if data.empty:
+        #     # If URL fails, check if manual values are usable
+        #     if not is_number(Kcal_100g) or not is_number(Prot_100g):
+        #         print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')
+        #         return
+        #     #URL didn't work BUT we have manual data
+        #     self.kcal_100g = float(Kcal_100g)
+        #     self.prot_100g = float(Prot_100g)
+        # #URL works : Get the nutritional data
+        # else:
+        #     try:
+        #         self.kcal_100g = self.getKcalPer100g(data)
+        #         self.prot_100g = self.getProtPer100g(data)
+        #     except Exception as e:
+        #         print(f'Failed to extract nutritional data from URL for {self.name}: {e}')
+        #         return 
 
-        # If URL gives empty dataframe : Check if kcal_100g and prot_100g are both filled in and numeric  
-        if data.empty and (not is_number(Kcal_100g) or not is_number(Prot_100g)): 
-            print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')
-            return
+        # # If URL gives empty dataframe : Check if kcal_100g and prot_100g are both filled in and numeric  
+        # if data.empty and (not is_number(Kcal_100g) or not is_number(Prot_100g)): 
+        #     print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')
+        #     return
 
         # Calculate the unit values
         self.kcal_unit = (gramPerUnit * ( self.kcal_100g/100) ) if self.kcal_100g>0 else 0
