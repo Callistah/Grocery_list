@@ -24,7 +24,7 @@ current_month = str(datetime.now().month)
 seasonal_this_month = set(seasonal_ingredients.get(current_month, []))
  
 #LOAD DATA FROM LOG FILE
-log_file_path = "Grocery_List/Excel_files/Log/Grocery_List_Log.xlsx"
+log_file_path = "./Excel_files/Log/Grocery_List_Log.xlsx"
 
 
 # --- Initialize session state for recipe selections ---
@@ -334,8 +334,8 @@ if page == "Grocery List Maker":
     if output_mode == "Export to Excel":
         buffer = io.BytesIO()
         today = date.today().isoformat()
-        file_path = f'Grocery_List\Excel_files\Export\Grocery_List_{today}.xlsx'
-        log_file_path = 'Grocery_List\Excel_files\Log\Grocery_List_Log.xlsx'
+        file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
+        log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
 
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             combined.to_excel(writer, index=False, sheet_name="Combined")
@@ -379,7 +379,7 @@ elif page == "Data Analysis":
     st.title("Grocery List Analysis")
     st.header("Groceries Analysis")
     
-    log_file_path = "Grocery_List/Excel_files/Log/Grocery_List_Log.xlsx"
+    log_file_path = "./Excel_files/Log/Grocery_List_Log.xlsx"
 
     if not os.path.exists(log_file_path):
         st.warning("Log file not found. No data to analyze yet.")
