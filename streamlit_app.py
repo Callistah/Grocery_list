@@ -56,7 +56,7 @@ if page == "Grocery List Maker":
             ingredientsRecipe[ingredient] = {'amount': amount, 'unit': unit}
         st.write(recipe_name, ingredientsRecipe)
         Recipe(recipe_name, ingredientsRecipe)
-     st.write(RecipeDict)
+    st.write(RecipeDict)
 
 
  
