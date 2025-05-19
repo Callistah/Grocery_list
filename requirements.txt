@@ -2,7 +2,7 @@ streamlit
 pandas 
 datetime 
 altair
-plotly.graph_objects
+plotly
 networkx
 itertools  
 collections
