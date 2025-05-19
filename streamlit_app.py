@@ -1475,7 +1475,8 @@ elif page == "Data Analysis":
                 .sort_values(by="IngredientLabel")
                 )
                 with st.expander(f"Combined ingredients for {export_date.strftime('%B %d, %Y')}", expanded=False):
-                    st.dataframe(group_df[col_seq].set_index("IngredientLabel"), use_container_width=True)
+                    st.dataframe(group_df[["IngredientLabel", "Amount", "Unit"] ].set_index("IngredientLabel"), use_container_width=True)
+#col_seq=["Ingredient", "Amount", "Unit"] 
 
         with tab_sum_all:
             st.dataframe(result_comb_df[["IngredientLabel", "sum", "Unit"]].set_index("IngredientLabel").rename(columns={'sum':'Sum of Amount'}) , use_container_width=True)
