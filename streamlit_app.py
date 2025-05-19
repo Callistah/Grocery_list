@@ -39,29 +39,7 @@ st.sidebar.title("Settings")
 
 # --- GROCERY LIST MAKER ---
 if page == "Grocery List Maker":
-    st.title("Grocery List Maker! A La Esh!")
-    st.write(RecipeDict)
-    st.write(IngredientDict)
- 
-    RecipeDict.clear()
-    df = pd.read_excel("./Excel_files/data.xlsx", sheet_name='Recipes')
-    grouped = df.groupby('recipe_name')
-
-    for recipe_name, group in grouped:
-        ingredientsRecipe = {}
-        for _, row in group.iterrows():
-            ingredient = row['ingredient'].replace(" ", "").upper()#row['ingredient']
-            amount = row['amount']
-            unit = row['unit']
-            ingredientsRecipe[ingredient] = {'amount': amount, 'unit': unit}
-        st.write(recipe_name, ingredientsRecipe)
-        st.write("Attempting to add recipe:", recipe_name)
-        st.write("With ingredients:", list(ingredientsRecipe.keys()))
-        Recipe(recipe_name, ingredientsRecipe)
-    st.write(RecipeDict)
-
-
- 
+    st.title("Grocery List Maker! A La Esh!") 
     # st.sidebar.title("Settings")
     with st.expander('Choose recipes and portions'):
         for recipe in RecipeDict:
