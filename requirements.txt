@@ -6,3 +6,4 @@ networkx
 datasets
 plotly
 beautifulsoup4
+selenium
