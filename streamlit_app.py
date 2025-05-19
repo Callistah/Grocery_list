@@ -44,7 +44,7 @@ if page == "Grocery List Maker":
     st.write(IngredientDict)
  
     RecipeDict.clear()
-    df = pd.read_excel(".\Excel_files\data.xlsx", sheet_name='Recipes')
+    df = pd.read_excel("./Excel_files/data.xlsx", sheet_name='Recipes')
     grouped = df.groupby('recipe_name')
 
     for recipe_name, group in grouped:
