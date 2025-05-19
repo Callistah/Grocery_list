@@ -51,9 +51,9 @@ In [main.py](Grocery_list\main.py) I've assembled all functions and class defini
 Also the data of Recipes and Ingredients are loaded at the end of this file.
 In this main, the file [colruyt_scraper.py](Grocery_list\Colruty_scraping\colruyt_scraper.py) is used to scrape the nutritional data from the Colruyt site. I focus on the kcal and protein values.
 
-This main file loaded as a module into the [streamlit_app.py](Grocery_list\streamlit_app.py).
+This main file loaded as a module into the [streamlit_app.py](./streamlit_app.py).
 
-[streamlit_app.py](Grocery_list\streamlit_app.py) takes care of the Streamlit UI.
+[streamlit_app.py](./streamlit_app.py) takes care of the Streamlit UI.
 
 
 ## Data Recipes & Ingredients
@@ -187,7 +187,7 @@ f_df_per_recipe["Ingredient_Cat"] = f_df_per_recipe["Ingredient"].apply(categori
 ## 1. What are the most used recipes?
 To find the most used recipes, I plotted per recipe over time how many portions were logged at each export.
 
-View my python file with detailed steps here: [streamlit_app.py](Grocery_list\streamlit_app.py).
+View my python file with detailed steps here: [streamlit_app.py](./streamlit_app.py).
 
 ### Visualize Data
 ```python
@@ -271,7 +271,7 @@ else:
     st.write(caption)#st.caption(f'Select ingredients from dropdown above. Hover for details.')
 ```
 ### Results
-![Visualization of Portions per Recipe over Time](Images\Portions_Recipe_Time.png)
+![Visualization of Portions per Recipe over Time](./Images/Portions_Recipe_Time.png)
 
 *Line graph visualizing the amount of portions for each recipe.*
 ### Insights
@@ -287,7 +287,7 @@ With this we need to take into account:
 - the average amount of portions per export
 - and amount of ingredients used in 1 portion
 
-View my python file with detailed steps here: [streamlit_app.py](Grocery_list\streamlit_app.py).
+View my python file with detailed steps here: [streamlit_app.py](./streamlit_app.py). 
 
 ### Visualize Data
 ``` python
@@ -326,11 +326,11 @@ else:
     st.write(caption)
 ```
 ### Results
-![Visualization of Popularity Recipes](Images\Popularity_Recipe.png)
+![Visualization of Popularity Recipes](./Images/Popularity_Recipe.png)
 
 *Plot graph visualizing the correlation between the frequency - average amount of portions - amount of ingredients*
 
-![Visualization of Average Portions per Logging](Images\AvgPortion_Recipe.png)
+![Visualization of Average Portions per Logging](./Images/AvgPortion_Recipe.png)
 *Plot graph visualizing the correlation between the frequency - average amount of portions*
 
 ### Insights:
@@ -344,7 +344,7 @@ else:
 ## 3. Does the amount of ingredients used in a recipe influence how many times this recipe is logged?
 In the last question there didn't seem to be a correlation between the amount of unique ingredients per recipe and how many times it was chosen or the average amount of portions. But I want to examine this a bit further.
 
-View my python file with detailed steps here: [streamlit_app.py](Grocery_list\streamlit_app.py).
+View my python file with detailed steps here: [streamlit_app.py](./streamlit_app.py).
 
 ### Visualize Data
 ```python
@@ -381,7 +381,7 @@ else:
     st.write(caption)
 ```
 
-![Visualization of Unique Ingredients](Images\Unique_ingredients_recipe.png)
+![Visualization of Unique Ingredients](./Images/Unique_ingredients_recipe.png)
 *Bar graph of top recipes with most unique ingredients*
 
 ### Insights
@@ -395,7 +395,7 @@ else:
 ## 4. How do recipes with a lower kcal/portion compare to recipes with a higher kcal/portion?
 To further analyse why recipes with less ingredients don't seem more popular, other indicators must be taken into account. Next step is to look at the kcal / portion of a recipe and the amount of protein per 100 kcal.
 
-View my python file with detailed steps here: [streamlit_app.py](Grocery_list\streamlit_app.py).
+View my python file with detailed steps here: [streamlit_app.py](./streamlit_app.py).
 
 ### Visualize Data
 ```python
@@ -447,7 +447,7 @@ If we combine these 4 metrics of each recipe, is there a correlation that might 
 - Average Portions / Save
 - Amount of Ingredients
 
-View my python file with detailed steps here: [streamlit_app.py](Grocery_list\streamlit_app.py).
+View my python file with detailed steps here: [streamlit_app.py](./streamlit_app.py).
 
 ### Visualize Data
 ```python
@@ -507,7 +507,7 @@ else:
 ```
 
 ### Results
-![Visualize multiple nutritional metrics](.\Images\Radarchart.png)
+![Visualize multiple nutritional metrics](./Images/Radarchart.png)
 *A radar chart that compares Protein/100kcal - Kcal/Portion - Number of Ingredients - Average Portions*
 
 ### Insights:
