@@ -57,7 +57,7 @@ if page == "Grocery List Maker":
             amount = row['amount']
             unit = row['unit']
             ingredientsRecipe[ingredient] = {'amount': amount, 'unit': unit}
-         st.write(recipe_name, ingredientsRecipe)
+        st.write(recipe_name, ingredientsRecipe)
         Recipe(recipe_name, ingredientsRecipe)
 
 
