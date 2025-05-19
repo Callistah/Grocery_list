@@ -1,713 +1,723 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": 40,
-   "id": "0d48f2ab",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# pip install openpyxl\n",
-    "# pip install streamlit\n",
-    "\n",
-    "# Importing Libraries\n",
-    "from datasets import load_dataset \n",
-    "from datetime import datetime, date   \n",
-    "from collections import defaultdict\n",
-    "import seaborn as sns\n",
-    "import streamlit as st\n",
-    "import io\n",
-    "import pandas as pd\n",
-    "import matplotlib.pyplot as plt\n",
-    "import ast \n",
-    "import math\n",
-    "\n",
-    "# Use home made scraper to get nutritional value for a product from a link\n",
-    "from colruyt_scraper import get_nutritional_data\n",
-    "\n",
-    "today = date.today().isoformat()\n",
-    "# Std functions\n",
-    "def is_number(x):\n",
-    "    try:\n",
-    "        return not math.isnan(float(x))\n",
-    "    except:\n",
-    "        return False"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 5,
-   "id": "9982445a",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# Std dictionary for IngredientDic \n",
-    "IngredientDic = {}\n",
-    "\n",
-    "# Make a class for Ingrdient \n",
-    "# Append to IngredientDic on creation\n",
-    "class Ingredient:\n",
-    "    def __init__(self,name, gramPerUnit, url='', Kcal_100g='', Prot_100g=''):\n",
-    "        self.name = name \n",
-    "        self.gramPerUnit = gramPerUnit \n",
-    "        self.url = url \n",
-    "\n",
-    "        # Only add object to IngredientDic if does not already exist\n",
-    "        if not self.doesIngredientExist():\n",
-    "            self.addToIngredientDic()\n",
-    "        else:\n",
-    "            print(f'Ingredient {self.name} already exists')\n",
-    "            return\n",
-    "        \n",
-    "        # If URL gives empty dataframe : Check if kcal_100g and prot_100g are both filled in and numeric  \n",
-    "        if get_nutritional_data(url).empty and (not is_number(Kcal_100g) or not is_number(Prot_100g)): \n",
-    "            print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')\n",
-    "            return\n",
-    "        \n",
-    "        # Add 100gKcal and 100gProt dependant on url\n",
-    "        #URL doesn't work : returns empty dataframe\n",
-    "        if get_nutritional_data(url).empty: \n",
-    "            self.kcal_100g = Kcal_100g\n",
-    "            self.prot_100g = Prot_100g\n",
-    "        #URL works : returns a dataframe\n",
-    "        else: \n",
-    "            self.kcal_100g = self.getKcalPer100g()\n",
-    "            self.prot_100g = self.getProtPer100g()\n",
-    "\n",
-    "        self.kcal_unit = (gramPerUnit * (self.kcal_100g/100) )\n",
-    "        self.prot_unit = (gramPerUnit * (self.prot_100g/100) )\n",
-    "        self.protPer100Kcal = (self.prot_100g / self.kcal_100g*100) \n",
-    "    \n",
-    "    def show(self):\n",
-    "        text =  f'-----------------------------------------------\\n'\n",
-    "        text += f'Ingredient {self.name}\\n'\n",
-    "        text += f'-----------------------------------------------\\n'\n",
-    "        text += f'URL : {self.url}\\n'\n",
-    "        text += f'KCal / 100g : {self.kcal_100g}\\n'\n",
-    "        text += f'Prot / 100g : {self.prot_100g}\\n'\n",
-    "        text += f'Gram / unit : {self.gramPerUnit}\\n'\n",
-    "        text += f'KCal / unit : {self.kcal_unit}\\n'\n",
-    "        text += f'Prot / unit : {self.prot_unit}\\n'\n",
-    "        text += f'Prot / 100KCal : {self.protPer100Kcal}\\n'\n",
-    "        text += f'-----------------------------------------------\\n'\n",
-    "        print(text)\n",
-    "\n",
-    "    def addToIngredientDic(self):\n",
-    "        IngredientDic[self.name.upper()] = self\n",
-    "\n",
-    "    def doesIngredientExist(self):\n",
-    "        if self.name.upper() in IngredientDic:\n",
-    "            return True\n",
-    "\n",
-    "    def getProtPer100g(self):\n",
-    "        data = get_nutritional_data(self.url)\n",
-    "        return float(data.loc[data['Nutrition'] == 'Eiwitten']['Value'].values[0])\n",
-    "    def getKJPer100g(self):\n",
-    "        data = get_nutritional_data(self.url)\n",
-    "        return float(data.loc[data['Nutrition'] == 'Energie kJ']['Value'].values[0])\n",
-    "    def getKcalPer100g(self):\n",
-    "        data = get_nutritional_data(self.url)\n",
-    "        if data[data['Nutrition'] == 'Energie kcal']['Value'].empty:\n",
-    "            return self.getKJPer100g()/ 4.184\n",
-    "        else:\n",
-    "            return float(data.loc[data['Nutrition'] == 'Energie kcal']['Value'].values[0])\n",
-    "    def getFatPer100g(self):\n",
-    "        data = get_nutritional_data(self.url)\n",
-    "        return float(data.loc[data['Nutrition'] == 'Totaal vetten']['Value'].values[0])\n",
-    "    def getCarbsPer100g(self):\n",
-    "        data = get_nutritional_data(self.url)\n",
-    "        return float(data.loc[data['Nutrition'] == 'Totaal koolhydraten']['Value'].values[0])\n",
-    "    def getSugarPer100g(self):\n",
-    "        data = get_nutritional_data(self.url)\n",
-    "        return float(data.loc[data['Nutrition'] == 'Suikers']['Value'].values[0])\n",
-    "    def getFiberPer100g(self):\n",
-    "        data = get_nutritional_data(self.url)\n",
-    "        return float(data.loc[data['Nutrition'] == 'Vezels']['Value'].values[0])\n",
-    "    def getSaltPer100g(self):\n",
-    "        data = get_nutritional_data(self.url)\n",
-    "        return float(data.loc[data['Nutrition'] == 'Zout']['Value'].values[0])\n",
-    "    \n",
-    "    def getKcal(self,amount,unit='g'):\n",
-    "        if is_number(amount):\n",
-    "            if unit == 'g':\n",
-    "                return self.kcal_100g * (amount/100)\n",
-    "            if unit == 'u':\n",
-    "                return self.kcal_unit * amount\n",
-    "        else:\n",
-    "            print(f'Amount must be numeric.')\n",
-    "            return 0\n",
-    "    def getProt(self,amount,unit='g'):\n",
-    "        if is_number(amount):\n",
-    "            if unit == 'g':\n",
-    "                return self.prot_100g * (amount/100)\n",
-    "            if unit == 'u':\n",
-    "                return self.prot_unit * amount\n",
-    "        else:\n",
-    "            print(f'Amount must be numeric.')\n",
-    "            return 0\n",
-    "    \n",
-    "    def getGram(self,unitAmount):\n",
-    "        if is_number(unitAmount):\n",
-    "            return unitAmount * self.gramPerUnit\n",
-    "        else:\n",
-    "            print(f'Amount must be numeric.')\n",
-    "    def getUnit(self,gramAmount):\n",
-    "        if is_number(gramAmount):\n",
-    "            return gramAmount / self.gramPerUnit\n",
-    "        else:\n",
-    "            print(f'Amount must be numeric.')\n",
-    "        "
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 10,
-   "id": "80453039",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# Std dictionary for RecipeDic\n",
-    "RecipeDic = {}\n",
-    "\n",
-    "# Make a class for Recipe \n",
-    "# Append to RecipeDic on creation\n",
-    "class Recipe:\n",
-    "    def __init__(self,name,ingredientsRecipe={}):\n",
-    "        self.name = name \n",
-    "        self.ingredientsRecipe = ingredientsRecipe \n",
-    "\n",
-    "        # Does Recipe have ingredients?\n",
-    "        if not ingredientsRecipe:\n",
-    "            print(f\"Recipe '{self.name}' must have at least one ingredient.\")\n",
-    "            return\n",
-    "\n",
-    "        for ingredient in ingredientsRecipe:\n",
-    "                if ingredient.upper() not in IngredientDic:\n",
-    "                    print(f\"Cannot add recipe. Ingredient '{ingredient}' is not in the global ingredient list.\")\n",
-    "                    return\n",
-    "\n",
-    "        # Only add recipe to RecipeDic if does not already exist\n",
-    "        if not self.doesRecipeExist():\n",
-    "            self.addToRecipeDic()\n",
-    "        else:\n",
-    "            print(f'Recipe {self.name} already exists')\n",
-    "            return\n",
-    "\n",
-    "    def show(self, portion=1):\n",
-    "        text =  f'---------------------------------------------------------\\n'\n",
-    "        text += f'Recipe {self.name} ({portion} portion(s)) - Ingredients\\n'\n",
-    "        text += f'---------------------------------------------------------\\n'\n",
-    "        for ing_name, values in self.ingredientsRecipe.items():\n",
-    "            text += f'Ingredient {ing_name} :  {values.get(\"amount\")*portion} {values.get(\"unit\").replace(\"u\",\"UNIT\")}\\n' \n",
-    "        text += f'---------------------------------------------------------\\n'\n",
-    "        print(text)\n",
-    "\n",
-    "    def showDetails(self, portion=1):\n",
-    "        text =  f'---------------------------------------------------------\\n'\n",
-    "        text += f'Recipe {self.name} ({portion} portion(s)) - Ingredients Details\\n'\n",
-    "        text += f'---------------------------------------------------------\\n'\n",
-    "        for ing_name, values in self.ingredientsRecipe.items():\n",
-    "            text += f'Ingredient {ing_name} :  {values.get(\"amount\")*portion} {values.get(\"unit\").replace(\"u\",\"UNIT\")}\\n' \n",
-    "            amount = values.get('amount')*portion \n",
-    "            unit = values.get('unit')\n",
-    "\n",
-    "            #Get my object for this ingredient\n",
-    "            ingredientGlobal = IngredientDic.get(ing_name.upper()) \n",
-    "            if ingredientGlobal: \n",
-    "                text += f'          => Kcal: {round(ingredientGlobal.getKcal(amount, unit),2)}   => Prot: {round(ingredientGlobal.getProt(amount, unit),2)} \\n' \n",
-    "        text += f'---------------------------------------------------------\\n'\n",
-    "        text += f'Total => Kcal: {round(self.getTotalKcal(portion),2)}   => Prot: {round(self.getTotalProt(portion),2)}  \\n' \n",
-    "        text += f'---------------------------------------------------------\\n'\n",
-    "        print(text)\n",
-    "        \n",
-    "    def addToRecipeDic(self):\n",
-    "        RecipeDic[self.name.upper()] = self\n",
-    "    def doesRecipeExist(self):\n",
-    "        if self.name.upper() in RecipeDic:\n",
-    "            return True\n",
-    "        else:\n",
-    "            return False\n",
-    "    \n",
-    "    # Recipe Functions\n",
-    "    def getTotalKcal(self,portion=1):\n",
-    "        # Loop over each ingredient\n",
-    "        total_kcal = 0\n",
-    "        for ing_name , values in self.ingredientsRecipe.items():\n",
-    "            amount = values.get('amount')*portion \n",
-    "            unit = values.get('unit')\n",
-    "\n",
-    "            #Get my object for this ingredient\n",
-    "            ingredientGlobal = IngredientDic.get(ing_name.upper()) \n",
-    "            if ingredientGlobal: \n",
-    "                #Calculate the kcal for this ingredient\n",
-    "                total_kcal += ingredientGlobal.getKcal(amount, unit)\n",
-    "\n",
-    "        return round(total_kcal,2)\n",
-    "    def getTotalProt(self,portion=1):\n",
-    "        # Loop over each ingredient\n",
-    "        total_prot = 0\n",
-    "        for ing_name , values in self.ingredientsRecipe.items():\n",
-    "            amount = values.get('amount')*portion \n",
-    "            unit = values.get('unit')\n",
-    "\n",
-    "            #Get my object for this ingredient\n",
-    "            ingredientGlobal = IngredientDic.get(ing_name.upper()) \n",
-    "            if ingredientGlobal: \n",
-    "                #Calculate the kcal for this ingredient\n",
-    "                total_prot += ingredientGlobal.getProt(amount, unit)\n",
-    "\n",
-    "        return round(total_prot,2)\n",
-    "    def getIngrList(self):\n",
-    "        listIngr = []\n",
-    "        for ing_name, values in self.ingredientsRecipe.items():\n",
-    "            listIngr.append(ing_name)\n",
-    "        return listIngr\n",
-    "    def getIngrDetailsList(self,portion=1):\n",
-    "        listIngrDetails = []\n",
-    "        for ing_name, values in self.ingredientsRecipe.items():\n",
-    "            amount = values.get('amount')*portion\n",
-    "            unit = values.get('unit')\n",
-    "            ingr = IngredientDic[ing_name.upper()]\n",
-    "            kcal = ingr.getKcal(amount,unit)\n",
-    "            prot = ingr.getProt(amount,unit)\n",
-    "            listIngrDetails.append({ing_name.upper(): {'amount':amount, \n",
-    "                                                        'unit':unit,\n",
-    "                                                        'kcal': round(kcal,2) ,\n",
-    "                                                        'prot': round(prot,2)\n",
-    "                                                        }\n",
-    "                                    })\n",
-    "            \n",
-    "        return listIngrDetails\n",
-    "        # print(ing_name, amount, unit, kcal, prot)\n",
-    "        # print(IngredientDic[ing_name.upper()] )\n",
-    "    "
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 6,
-   "id": "6053a9ce",
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "<__main__.Ingredient at 0x22fbd6576d0>"
-      ]
-     },
-     "execution_count": 6,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "# Std dictionary for IngredientDic \n",
-    "# IngredientDic = {}\n",
-    "\n",
-    "Ingredient('Baguette',150,'https://fic.colruytgroup.com/productinfo/nl/cogo/4361782',243,7.3)\n",
-    "Ingredient('MaïsKleinBlik',330, 'https://fic.colruytgroup.com/productinfo/nl/cogo/4474028')\n",
-    "Ingredient('Limoensap',250, 'https://fic.colruytgroup.com/productinfo/nl/cogo/1981700')\n",
-    "Ingredient('Ketchup',1350,'https://fic.colruytgroup.com/productinfo/nl/cogo/1009041')\n",
-    "Ingredient('Mosterd',220,'https://fic.colruytgroup.com/productinfo/nl/cogo/4581824')\n",
-    "Ingredient('Mozarella',250,'https://fic.colruytgroup.com/productinfo/nl/cogo/2477579')\n",
-    "Ingredient('SuperGehakt',200,'https://fic.colruytgroup.com/productinfo/nl/cogo/4591807')\n",
-    "Ingredient('Avocado',180,'https://fic.colruytgroup.com/productinfo/nl/cogo/3010360',160,2)\n",
-    "Ingredient('Spitskool',1000,'https://fic.colruytgroup.com/productinfo/nl/cogo/3593592',33,3)\n",
-    "Ingredient('Tomaat',65,'https://fic.colruytgroup.com/productinfo/nl/cogo/29800',19,1)\n",
-    "Ingredient('RodeUi',100,'https://fic.colruytgroup.com/productinfo/nl/cogo/1427332',37,1.3)\n",
-    "Ingredient('RodeWijnAzijn',500,'https://fic.colruytgroup.com/productinfo/nl/cogo/3805140',21,0)\n",
-    "Ingredient('RodePaprika',135,'https://fic.colruytgroup.com/productinfo/nl/cogo/3805140',26,1)\n",
-    "Ingredient('Seitan',180,'https://fic.colruytgroup.com/productinfo/nl/cogo/4525388')\n",
-    "Ingredient('Wrap',62,'https://fic.colruytgroup.com/productinfo/nl/cogo/3634882')\n",
-    "Ingredient('Pizzadeeg',265,'https://fic.colruytgroup.com/productinfo/nl/cogo/4592829')\n",
-    "Ingredient('Passata',500,'https://fic.colruytgroup.com/productinfo/nl/cogo/1388530')\n",
-    "Ingredient('Anjovis',100,'https://fic.colruytgroup.com/productinfo/nl/cogo/1146797')\n",
-    "Ingredient('Courgette',250,'https://fic.colruytgroup.com/productinfo/nl/cogo/1146797', 27, 1.8)\n",
-    "Ingredient('Spaghetti',500,'https://fic.colruytgroup.com/productinfo/nl/cogo/14502')\n",
-    "Ingredient('SpaghettiSaus',520,'https://fic.colruytgroup.com/productinfo/nl/cogo/2262694')\n",
-    "\n",
-    "\n",
-    "\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 32,
-   "id": "cf4e0c22",
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/plain": [
-       "<__main__.Recipe at 0x22fbf96d650>"
-      ]
-     },
-     "execution_count": 32,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "# Std dictionary for RecipeDic\n",
-    "RecipeDic = {}\n",
-    "\n",
-    "Recipe('Fajita', \n",
-    "                {'Avocado':{'amount': 0.25,'unit': 'u'}, \n",
-    "                'Limoensap':{'amount': 3.5,'unit': 'g'}, \n",
-    "                'Spitskool':{'amount': 50,'unit': 'g'}, \n",
-    "                'Seitan':{'amount': 100,'unit': 'g'}, \n",
-    "                'Tomaat':{'amount': 1,'unit': 'u'},  \n",
-    "                'RodeUi':{'amount': 0.25,'unit': 'u'}, \n",
-    "                'MaïsKleinBlik':{'amount': 0.25,'unit': 'u'}, \n",
-    "                'RodeWijnAzijn':{'amount': 10,'unit': 'g'}, \n",
-    "                'RodePaprika':{'amount': 0.5,'unit': 'u'}, \n",
-    "                'Wrap':{'amount': 1,'unit': 'u'}\n",
-    "                })\n",
-    "\n",
-    "Recipe('Baguette', \n",
-    "                {'Baguette': {'amount':0.5,'unit':'u'},\n",
-    "                 'Ketchup': {'amount':25, 'unit':'g'}, \n",
-    "                 'Mosterd':{'amount':12, 'unit':'g'},\n",
-    "                 'Mozarella':{'amount':50,'unit':'g'}, \n",
-    "                 'SuperGehakt':{'amount':75,'unit':'g'}, \n",
-    "                 'RodeUi':{'amount':0.5,'unit':'u'}\n",
-    "                })\n",
-    "\n",
-    "# print(RecipeDic['Fajita'.upper()].ingredientsRecipe.items() )\n",
-    "# print(RecipeDic['Fajita'.upper()].ingredientsRecipe.keys() )\n",
-    "# print(RecipeDic['Fajita'.upper()].ingredientsRecipe.values() )\n",
-    "\n",
-    "# for x in RecipeDic['Fajita'.upper()].ingredientsRecipe.values():\n",
-    "#     print(RecipeDic.keys(),x.get('amount'), x.get('unit') )\n",
-    "# print(RecipeDic.keys() )\n",
-    "\n",
-    "\n",
-    "        "
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 37,
-   "id": "bc63040b",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "\n",
-    "def searchIngrInIngrList(search_term):\n",
-    "    text =''\n",
-    "    found = False\n",
-    "    times =0\n",
-    "    for key in IngredientDic:\n",
-    "        if search_term.upper() in key.upper():\n",
-    "            if not found:\n",
-    "                text += f'{key}'\n",
-    "                times +=1\n",
-    "                found = True\n",
-    "            else:   \n",
-    "                text += f', {key}'\n",
-    "                times+= 1\n",
-    "    text = f'Found \"{search_term}\" {times} time(s) in ingredient list in: ' + text\n",
-    "\n",
-    "    if found:\n",
-    "        print(text)\n",
-    "    else:\n",
-    "        print(f'There are no ingredients yet with {search_term} in the description.')\n",
-    "def searchRecipInRecipList(search_term):\n",
-    "    text =''\n",
-    "    found = False\n",
-    "    times =0\n",
-    "    for key in RecipeDic:\n",
-    "        if search_term.upper() in key.upper():\n",
-    "            if not found:\n",
-    "                text += f'{key}'\n",
-    "                times +=1\n",
-    "                found = True\n",
-    "            else:   \n",
-    "                text += f', {key}'\n",
-    "                times+= 1\n",
-    "    text = f'Found \"{search_term}\" {times} time(s) in recipe list in: ' + text\n",
-    "\n",
-    "    if found:\n",
-    "        print(text)\n",
-    "    else:\n",
-    "        print(f'There are no recipes yet with {search_term} in the description.')\n",
-    "def searchIngrInRecipList(search_term):\n",
-    "    text =''\n",
-    "    for key,value in RecipeDic.items():\n",
-    "        textRecipe = ''\n",
-    "        times=0\n",
-    "        found=False\n",
-    "        for ingr_name in RecipeDic[key].getIngrList():\n",
-    "            if search_term.upper() in ingr_name.upper():\n",
-    "                if found:\n",
-    "                    textRecipe += f', {ingr_name}'\n",
-    "                    times +=1\n",
-    "                else: \n",
-    "                    textRecipe += f'{ingr_name}'\n",
-    "                    found = True\n",
-    "                    times +=1\n",
-    "        if found:\n",
-    "            textRecipe = f'For recipe {key}, \"{search_term}\" has been found {times} time(s) in ingredients: {textRecipe}\\n'\n",
-    "        text += textRecipe\n",
-    "    if text:\n",
-    "        print(text)\n",
-    "    else:\n",
-    "        print(f'There are no recipes yet with an ingredient with {search_term} in the description.')\n",
-    "def searchIngrDetailsInRecipList(search_term):\n",
-    "    text =''\n",
-    "    for key,value in RecipeDic.items():\n",
-    "        textRecipe = ''\n",
-    "        times=0\n",
-    "        found=False\n",
-    "        for ingr_name in RecipeDic[key].getIngrList():\n",
-    "            if search_term.upper() in ingr_name.upper():\n",
-    "                if found:\n",
-    "                    textRecipe += f', {ingr_name}'\n",
-    "                    times +=1\n",
-    "                else: \n",
-    "                    textRecipe += f'{ingr_name}'\n",
-    "                    found = True\n",
-    "                    times +=1\n",
-    "\n",
-    "                listDetails = RecipeDic[key].getIngrDetailsList() #Get the details per ingredient found\n",
-    "                for ingrlistDetail in listDetails:\n",
-    "                    for keyIngrListDetail, valueIngrListDetail in ingrlistDetail.items():\n",
-    "                        if keyIngrListDetail.upper() == ingr_name.upper():\n",
-    "                            textRecipe += f' ( {valueIngrListDetail.get(\"amount\")} {valueIngrListDetail.get(\"unit\").replace(\"u\",\"UNIT\")} )'\n",
-    "\n",
-    "        if found:\n",
-    "            textRecipe = f'For recipe \"{key}\", \"{search_term}\" has been found in ingredients {times} time(s): {textRecipe}\\n'\n",
-    "        text += textRecipe\n",
-    "    if text:\n",
-    "        print(text)\n",
-    "    else:\n",
-    "        print(f'There are no recipes yet with an ingredient with {search_term} in the description.')\n",
-    "\n",
-    "\n",
-    "def getGroceryList(combine = 0, recipes = [] ):\n",
-    "    \n",
-    "    all_rows = []  # List of rows to build a DataFrame\n",
-    "\n",
-    "    textAll =''\n",
-    "    if combine==0:\n",
-    "        for recipe in recipes:\n",
-    "            textRec =''\n",
-    "            rec_name = recipe.get('name')\n",
-    "            rec_portion = recipe.get('portion')\n",
-    "\n",
-    "            # Put all ingredients with details , each a dictionary, into a list for that recipe\n",
-    "            listIngr = RecipeDic[rec_name].getIngrDetailsList(rec_portion)\n",
-    "            textRec  = f'------------------------------------------------------------------------\\n'\n",
-    "            textRec += f'Recipe: {rec_name} for {rec_portion} portion(s)\\n'\n",
-    "            textRec += f'------------------------------------------------------------------------\\n'\n",
-    "            \n",
-    "            # Get each ingredient for recipe\n",
-    "            for ingr in listIngr:\n",
-    "                for ingr_name, ingr_values in ingr.items():\n",
-    "                    row = {\n",
-    "                        'Recipe': rec_name,\n",
-    "                        'Portion': rec_portion,\n",
-    "                        'Ingredient': ingr_name,\n",
-    "                        'Amount': round(ingr_values.get('amount'), 2),\n",
-    "                        'Unit': ingr_values.get('unit'),\n",
-    "                        'Kcal': round(ingr_values.get('kcal'), 1),\n",
-    "                        'Prot': round(ingr_values.get('prot'), 1)\n",
-    "                    }\n",
-    "                    all_rows.append(row)\n",
-    "                    textAll += (f'Ingredient: {row[\"Ingredient\"]}     Amount: {row[\"Amount\"]} {row[\"Unit\"]}       '\n",
-    "                               f'Kcal: {row[\"Kcal\"]}      Prot: {row[\"Prot\"]}  \\n')\n",
-    "\n",
-    "        # print(textAll)\n",
-    "        df0 = pd.DataFrame(all_rows)#.sort_values(by='Recipe')\n",
-    "        return df0\n",
-    "\n",
-    "    else:\n",
-    "        combined_ingredients = defaultdict(lambda: {'amount': 0, 'unit': '', 'kcal': 0, 'prot': 0})\n",
-    "\n",
-    "        for recipe in recipes:\n",
-    "            rec_name = recipe.get('name')\n",
-    "            rec_portion = recipe.get('portion')\n",
-    "            # Put all ingredients with details , each a dictionary, into a list for that recipe\n",
-    "            listIngr = RecipeDic[rec_name].getIngrDetailsList(rec_portion)\n",
-    "\n",
-    "            # Get each ingredient for recipe\n",
-    "            for ingr in listIngr:\n",
-    "                for ingr_name, ingr_values in ingr.items():\n",
-    "                    ingr_name_upper = ingr_name.upper()\n",
-    "                    current_unit = ingr_values['unit']\n",
-    "\n",
-    "                    if combined_ingredients[ingr_name_upper]['unit'] in ('', current_unit):\n",
-    "                        combined_ingredients[ingr_name_upper]['amount'] += ingr_values['amount']\n",
-    "                        combined_ingredients[ingr_name_upper]['kcal'] += ingr_values['kcal']\n",
-    "                        combined_ingredients[ingr_name_upper]['prot'] += ingr_values['prot']\n",
-    "                        combined_ingredients[ingr_name_upper]['unit'] = current_unit\n",
-    "\n",
-    "        for name, values in combined_ingredients.items():\n",
-    "            all_rows.append({\n",
-    "                'Ingredient': name,\n",
-    "                'Amount': round(values['amount'], 2),\n",
-    "                'Unit': values['unit'],\n",
-    "                'Kcal': round(values['kcal'], 1),\n",
-    "                'Prot': round(values['prot'], 1)\n",
-    "            })\n",
-    "        # Convert to dataframe\n",
-    "        df1 = pd.DataFrame(all_rows).sort_values(by='Ingredient')\n",
-    "\n",
-    "        # Print formatted text\n",
-    "        textAll = '------------------------------------------------------------------------\\n'\n",
-    "        textAll += 'Combined Grocery List:\\n'\n",
-    "        textAll += '------------------------------------------------------------------------\\n'\n",
-    "        for _, row in df1.iterrows():\n",
-    "            textAll += (f'Ingredient: {row[\"Ingredient\"]}     Amount: {row[\"Amount\"]} {row[\"Unit\"]}       '\n",
-    "                        f'Kcal: {row[\"Kcal\"]}      Prot: {row[\"Prot\"]}  \\n')\n",
-    "        # print(textAll)\n",
-    "\n",
-    "        return df1\n",
-    "\n",
-    "def exportGroceryListToExcel(recipes):\n",
-    "  # Get the DataFrames\n",
-    "    df_combined = getGroceryList(combine=1, recipes=recipes)     # Combined totals\n",
-    "    df_detailed = getGroceryList(combine=0, recipes=recipes)     # Per recipe\n",
-    "  \n",
-    "    # Export to one Excel file with two sheets\n",
-    "    filename = f'grocery_list_{today}.xlsx'\n",
-    "    \n",
-    "\n",
-    "    with pd.ExcelWriter(filename, engine='openpyxl') as writer:\n",
-    "        df_combined.to_excel(writer, sheet_name='Combined', index=False)\n",
-    "        df_detailed.to_excel(writer, sheet_name='Per Recipe', index=False)\n",
-    "\n",
-    "\n",
-    "exportGroceryListToExcel([{'name':'BAGUETTE', 'portion':2},{'name':'FAJITA', 'portion':5} ])\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 44,
-   "id": "4f73e591",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "FAJITA <__main__.Recipe object at 0x0000022FBF96C790>\n",
-      "BAGUETTE <__main__.Recipe object at 0x0000022FBF96D650>\n"
-     ]
-    }
-   ],
-   "source": [
-    "for recipe, y in RecipeDic.items():\n",
-    "    print(recipe,y)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 45,
-   "id": "5a11000b",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "2025-05-10 17:57:55.129 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.130 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.131 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.132 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.133 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.134 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.135 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.136 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.137 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.137 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.139 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.140 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.140 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n",
-      "2025-05-10 17:57:55.141 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.\n"
-     ]
-    }
-   ],
-   "source": [
-    "\n",
-    "# --- Streamlit App ---\n",
-    "st.title(\"Grocery List Maker! A la Esh!\")\n",
-    "\n",
-    "# Select recipes and portions\n",
-    "selected = {}\n",
-    "st.subheader(\"Choose recipes and portions:\")\n",
-    "for recipe in RecipeDic:\n",
-    "    use = st.checkbox(f\"{recipe}\")\n",
-    "    if use:\n",
-    "        portion = st.number_input(f\"Portion for {recipe.name}\", min_value=0, value=1,step=1)\n",
-    "        selected[recipe] = portion\n",
-    "\n",
-    "# Output options\n",
-    "if selected:\n",
-    "    view_mode = st.radio(\"View Mode:\", [\"Combined\", \"Per Recipe\"])\n",
-    "    output_mode = st.radio(\"Output Format:\", [\"DataFrame\", \"Export to Excel\"])\n",
-    "\n",
-    "    all_data = []\n",
-    "    for recipe, portion in selected.items():\n",
-    "        data = recipe.scaled_ingredients(portion)\n",
-    "        df = pd.DataFrame(data)\n",
-    "        if view_mode == \"Per Recipe\":\n",
-    "            st.subheader(recipe.name)\n",
-    "            st.dataframe(df)\n",
-    "        else:\n",
-    "            all_data.extend(data)\n",
-    "\n",
-    "    if view_mode == \"Combined\":\n",
-    "        df_all = pd.DataFrame(all_data)\n",
-    "        combined = df_all.groupby([\"Ingredient\", \"Unit\"], as_index=False).sum()\n",
-    "        st.subheader(\"Combined Ingredients\")\n",
-    "        st.dataframe(combined)\n",
-    "\n",
-    "    if output_mode == \"Export to Excel\":\n",
-    "        buffer = io.BytesIO()\n",
-    "        with pd.ExcelWriter(buffer, engine=\"xlsxwriter\") as writer:\n",
-    "            if view_mode == \"Combined\":\n",
-    "                combined.to_excel(writer, index=False, sheet_name=\"Combined\")\n",
-    "            else:\n",
-    "                for recipe, portion in selected.items():\n",
-    "                    df = pd.DataFrame(recipe.scaled_ingredients(portion))\n",
-    "                    df.to_excel(writer, index=False, sheet_name=recipe.name)\n",
-    "        st.download_button(\n",
-    "            label=\"Download Excel File\",\n",
-    "            data=buffer.getvalue(),\n",
-    "            file_name=\"recipes.xlsx\",\n",
-    "            mime=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"\n",
-    "        )\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "46508407",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "python_course",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.11.11"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 5
+# pip install openpyxl
+# pip install streamlit
+
+# Importing Libraries
+from datasets import load_dataset 
+from datetime import date   
+from collections import defaultdict
+import pandas as pd
+import math
+from pathlib import Path
+
+# Use home made scraper to get nutritional value for a product from a link
+from Colruty_scraping.colruyt_scraper import get_nutritional_data
+from Colruty_scraping.colruyt_scraper_price import *
+
+BASE_DIR = Path.cwd()
+DATA_FILE = BASE_DIR / "Excel_files" / "data.xlsx"
+
+
+# Global dictionaries
+IngredientDict = {}
+RecipeDict = {}
+
+# Std variables
+today = date.today().isoformat()
+
+# Std functions
+def is_number(x):
+    try:
+        return not math.isnan(float(x))
+    except:
+        return False
+    
+
+# Make a class for Ingrdient 
+# Append to IngredientDict on creation
+class Ingredient:
+    def __init__(self,name, gramPerUnit, url='', Kcal_100g='', Prot_100g='', priceurl=''):
+        self.name = name 
+        self.gramPerUnit = gramPerUnit 
+        self.url = url 
+        name_key = self.name.replace(" ","").upper()
+        self.priceurl = priceurl
+        # IngredientDict[name] = self
+
+        # Only add object to IngredientDict if does not already exist
+        if name_key in IngredientDict:
+            print(f'Ingredient {self.name} already exists')
+            return
+        
+        # Get data from url
+        data = get_nutritional_data(url)
+
+        # URL did not work
+        if data.empty:
+            # If URL fails, check if manual values are usable
+            if not is_number(Kcal_100g) or not is_number(Prot_100g):
+                print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')
+                return
+            #URL didn't work BUT we have manual data
+            self.kcal_100g = float(Kcal_100g)
+            self.prot_100g = float(Prot_100g)
+        #URL works : Get the nutritional data
+        else:
+            try:
+                self.kcal_100g = self.getKcalPer100g(data)
+                self.prot_100g = self.getProtPer100g(data)
+            except Exception as e:
+                print(f'Failed to extract nutritional data from URL for {self.name}: {e}')
+                return 
+
+        # If URL gives empty dataframe : Check if kcal_100g and prot_100g are both filled in and numeric  
+        if data.empty and (not is_number(Kcal_100g) or not is_number(Prot_100g)): 
+            print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')
+            return
+
+        # Calculate the unit values
+        self.kcal_unit = (gramPerUnit * ( self.kcal_100g/100) ) if self.kcal_100g>0 else 0
+        self.prot_unit = (gramPerUnit * ( self.prot_100g/100) ) if self.prot_100g>0 else 0 #return n / d if d else 0
+        self.protPer100Kcal = (self.prot_100g / self.kcal_100g*100) if self.kcal_100g>0 else 0
+    
+        # Add the ingredient to the global dictionary
+        IngredientDict[name_key] = self
+
+    def getLabel(self):
+        return self.name
+    
+    def getKey(self):
+        return self.name.replace(" ","").upper()
+    
+    def show(self):
+        text =  f'-----------------------------------------------\n'
+        text += f'Ingredient {self.name}\n'
+        text += f'-----------------------------------------------\n'
+        text += f'URL : {self.url}\n'
+        text += f'KCal / 100g : {self.kcal_100g}\n'
+        text += f'Prot / 100g : {self.prot_100g}\n'
+        text += f'Gram / unit : {self.gramPerUnit}\n'
+        text += f'KCal / unit : {self.kcal_unit}\n'
+        text += f'Prot / unit : {self.prot_unit}\n'
+        text += f'Prot / 100KCal : {self.protPer100Kcal}\n'
+        text += f'-----------------------------------------------\n'
+        print(text)
+
+    def doesIngredientExist(self):
+        if self.name.replace(" ","").upper() in IngredientDict:
+            return True
+
+    def getProtPer100g(self, data=None):
+        # data = data or get_nutritional_data(self.url)
+        return float(data.loc[data['Nutrition'] == 'Eiwitten']['Value'].values[0])
+    
+    def getKJPer100g(self, data=None):
+        # data = data or get_nutritional_data(self.url)
+        return float(data.loc[data['Nutrition'] == 'Energie kJ']['Value'].values[0])
+    
+    def getKcalPer100g(self, data=None):
+        # data = data or get_nutritional_data(self.url)
+        if data[data['Nutrition'] == 'Energie kcal']['Value'].empty:
+            return self.getKJPer100g(data)/ 4.184
+        else:
+            return float(data.loc[data['Nutrition'] == 'Energie kcal']['Value'].values[0])
+    def getFatPer100g(self):
+        data = get_nutritional_data(self.url)
+        return float(data.loc[data['Nutrition'] == 'Totaal vetten']['Value'].values[0])
+    def getCarbsPer100g(self):
+        data = get_nutritional_data(self.url)
+        return float(data.loc[data['Nutrition'] == 'Totaal koolhydraten']['Value'].values[0])
+    def getSugarPer100g(self):
+        data = get_nutritional_data(self.url)
+        return float(data.loc[data['Nutrition'] == 'Suikers']['Value'].values[0])
+    def getFiberPer100g(self):
+        data = get_nutritional_data(self.url)
+        return float(data.loc[data['Nutrition'] == 'Vezels']['Value'].values[0])
+    def getSaltPer100g(self):
+        data = get_nutritional_data(self.url)
+        return float(data.loc[data['Nutrition'] == 'Zout']['Value'].values[0])
+    
+    def getKcal(self,amount,unit='g'):
+        if is_number(amount):
+            if unit == 'g':
+                return self.kcal_100g * (amount/100)
+            if unit == 'u':
+                return self.kcal_unit * amount
+        else:
+            print(f'Amount must be numeric.')
+            return 0
+    def getProt(self,amount,unit='g'):
+        if is_number(amount):
+            if unit == 'g':
+                return self.prot_100g * (amount/100)
+            if unit == 'u':
+                return self.prot_unit * amount
+        else:
+            print(f'Amount must be numeric.')
+            return 0
+    
+    def getGram(self,unitAmount):
+        if is_number(unitAmount):
+            return unitAmount * self.gramPerUnit
+        else:
+            print(f'Amount must be numeric.')
+    def getUnit(self,gramAmount):
+        if is_number(gramAmount):
+            return gramAmount / self.gramPerUnit
+        else:
+            print(f'Amount must be numeric.')
+        
+# Make a class for Recipe 
+# Append to RecipeDict on creation
+class Recipe:
+    def __init__(self,name,ingredientsRecipe={}):
+        self.name = name 
+        self.ingredientsRecipe = ingredientsRecipe 
+        name_key = self.name.replace(" ","").upper()
+
+        # Does Recipe have ingredients?
+        if not ingredientsRecipe:
+            print(f"Recipe '{self.name}' must have at least one ingredient.")
+            return
+        
+        for ingredient in ingredientsRecipe:
+                if ingredient.replace(" ","").upper() not in IngredientDict:
+                    print(f"Cannot add recipe. Ingredient '{ingredient}' is not in the global ingredient list.")
+                    return
+
+        # # Only add recipe to RecipeDict if does not already exist
+        # if not self.doesRecipeExist():
+        #     self.addToRecipeDict()
+        # else:
+        #     print(f'Recipe {self.name} already exists')
+        #     return
+        
+        # Only add object to RecipeDict if does not already exist
+        if name_key in RecipeDict:
+            print(f'Recipe {self.name} already exists')
+            return
+        
+        # Add the ingredient to the global dictionary
+        RecipeDict[name_key] = self
+
+    def show(self, portion=1):
+        text =  f'---------------------------------------------------------\n'
+        text += f'Recipe {self.name} ({portion} portion(s)) - Ingredients\n'
+        text += f'---------------------------------------------------------\n'
+        for ing_name, values in self.ingredientsRecipe.items():
+            text += f'Ingredient {ing_name} :  {values.get("amount")*portion} {values.get("unit").replace("u","UNIT")}\n' 
+        text += f'---------------------------------------------------------\n'
+        print(text)
+
+    def getLabel(self):
+        return self.name
+    
+    def getKey(self):
+        return self.name.replace(" ","").upper()
+
+    def showDetails(self, portion=1):
+        text =  f'---------------------------------------------------------\n'
+        text += f'Recipe {self.name} ({portion} portion(s)) - Ingredients Details\n'
+        text += f'---------------------------------------------------------\n'
+        for ing_name, values in self.ingredientsRecipe.items():
+            text += f'Ingredient {ing_name} :  {values.get("amount")*portion} {values.get("unit").replace("u","UNIT")}\n' 
+            amount = values.get('amount')*portion 
+            unit = values.get('unit')
+            
+            #Get my object for this ingredient
+            ingredientGlobal = IngredientDict.get(ing_name.replace(" ","").upper()) 
+            if ingredientGlobal: 
+                text += f'          => Kcal: {round(ingredientGlobal.getKcal(amount, unit),2)}   => Prot: {round(ingredientGlobal.getProt(amount, unit),2)} \n' 
+        text += f'---------------------------------------------------------\n'
+        text += f'Total => Kcal: {round(self.getTotalKcal(portion),2)}   => Prot: {round(self.getTotalProt(portion),2)}  \n' 
+        text += f'---------------------------------------------------------\n'
+        print(text)
+        
+    # def addToRecipeDict(self):
+    #     RecipeDict[self.name.upper()] = self
+    
+    def doesRecipeExist(self):
+        if self.name.replace(" ","").upper() in RecipeDict:
+            return True
+        else:
+            return False
+    
+    # Recipe Functions
+    def getTotalKcal(self,portion=1):
+        # Loop over each ingredient
+        total_kcal = 0
+        for ing_name , values in self.ingredientsRecipe.items():
+            amount = values.get('amount')*portion 
+            unit = values.get('unit')
+
+            #Get my object for this ingredient
+            ingredientGlobal = IngredientDict.get(ing_name.replace(" ","").upper()) 
+            if ingredientGlobal: 
+                #Calculate the kcal for this ingredient
+                total_kcal += ingredientGlobal.getKcal(amount, unit)
+
+        return round(total_kcal,2)
+    def getTotalProt(self,portion=1):
+        # Loop over each ingredient
+        total_prot = 0
+        for ing_name , values in self.ingredientsRecipe.items():
+            amount = values.get('amount')*portion 
+            unit = values.get('unit')
+
+            #Get my object for this ingredient
+            ingredientGlobal = IngredientDict.get(ing_name.replace(" ","").upper()) 
+            if ingredientGlobal: 
+                #Calculate the kcal for this ingredient
+                total_prot += ingredientGlobal.getProt(amount, unit)
+
+        return round(total_prot,2)
+    def getIngrList(self):
+        listIngr = []
+        for ing_name, values in self.ingredientsRecipe.items():
+            listIngr.append(ing_name)
+        return listIngr
+    def getIngrDetailsList(self,portion=1):
+        listIngrDetails = []
+        for ing_name, values in self.ingredientsRecipe.items():
+            amount = values.get('amount')*portion
+            unit = values.get('unit')
+            ingr = IngredientDict[ing_name.replace(" ","").upper()]
+            kcal = ingr.getKcal(amount,unit)
+            prot = ingr.getProt(amount,unit)
+            listIngrDetails.append({ing_name.replace(" ","").upper(): {'amount':amount, 
+                                                        'unit':unit,
+                                                        'kcal': round(kcal,2) ,
+                                                        'prot': round(prot,2)
+                                                        }
+                                    })
+            
+        return listIngrDetails
+        # print(ing_name, amount, unit, kcal, prot)
+        # print(IngredientDict[ing_name.upper()] )
+    
+        # Recipe Functions
+    def toDataFrameRows(self, portion=1):
+        #Returns a list of dicts to create a dataframe
+        rows=[]
+        for ing_name, values in self.ingredientsRecipe.items():
+            amount = values.get('amount',0)*portion
+            unit = values.get('unit',"")
+            ingr_key = values.get('name_key')
+            rows.append({
+                "Ingredient" : ing_name,
+                "IngredientKey" : ing_name.replace(" ","").upper(),
+                "Amount": amount,
+                "Unit": unit
+            })
+        # print (rows)
+        return rows
+
+
+def searchIngrInIngrList(search_term):
+    text =''
+    found = False
+    times =0
+    for key in IngredientDict:
+        if search_term.replace(" ","").upper() in key.replace(" ","").upper():
+            if not found:
+                text += f'{key}'
+                times +=1
+                found = True
+            else:   
+                text += f', {key}'
+                times+= 1
+    text = f'Found "{search_term}" {times} time(s) in ingredient list in: ' + text
+
+    if found:
+        print(text)
+    else:
+        print(f'There are no ingredients yet with {search_term} in the description.')
+def searchRecipInRecipList(search_term):
+    text =''
+    found = False
+    times =0
+    for key in RecipeDict:
+        if search_term.replace(" ","").upper() in key.replace(" ","").upper():
+            if not found:
+                text += f'{key}'
+                times +=1
+                found = True
+            else:   
+                text += f', {key}'
+                times+= 1
+    text = f'Found "{search_term}" {times} time(s) in recipe list in: ' + text
+
+    if found:
+        print(text)
+    else:
+        print(f'There are no recipes yet with {search_term} in the description.')
+def searchIngrInRecipList(search_term):
+    text =''
+    for key,value in RecipeDict.items():
+        textRecipe = ''
+        times=0
+        found=False
+        for ingr_name in RecipeDict[key].getIngrList():
+            if search_term.replace(" ","").upper() in ingr_name.replace(" ","").upper():
+                if found:
+                    textRecipe += f', {ingr_name}'
+                    times +=1
+                else: 
+                    textRecipe += f'{ingr_name}'
+                    found = True
+                    times +=1
+        if found:
+            textRecipe = f'For recipe {key}, "{search_term}" has been found {times} time(s) in ingredients: {textRecipe}\n'
+        text += textRecipe
+    if text:
+        print(text)
+    else:
+        print(f'There are no recipes yet with an ingredient with {search_term} in the description.')
+def searchIngrDetailsInRecipList(search_term):
+    text =''
+    for key,value in RecipeDict.items():
+        textRecipe = ''
+        times=0
+        found=False
+        for ingr_name in RecipeDict[key].getIngrList():
+            if search_term.replace(" ","").upper() in ingr_name.replace(" ","").upper():
+                if found:
+                    textRecipe  += f', {ingr_name}'
+                    times +=1
+                else: 
+                    textRecipe += f'{ingr_name}'
+                    found = True
+                    times +=1
+
+                listDetails = RecipeDict[key].getIngrDetailsList() #Get the details per ingredient found
+                for ingrlistDetail in listDetails:
+                    for keyIngrListDetail, valueIngrListDetail in ingrlistDetail.items():
+                        if keyIngrListDetail.replace(" ","").upper() == ingr_name.replace(" ","").upper():
+                            textRecipe += f' ( {valueIngrListDetail.get("amount")} {valueIngrListDetail.get("unit").replace("u","UNIT")} )'
+
+        if found:
+            textRecipe = f'For recipe "{key}", "{search_term}" has been found in ingredients {times} time(s): {textRecipe}\n'
+        text += textRecipe
+    if text:
+        print(text)
+    else:
+        print(f'There are no recipes yet with an ingredient with {search_term} in the description.')
+
+
+def getGroceryList(combine = 0, recipes = [] ):
+    
+    all_rows = []  # List of rows to build a DataFrame
+
+    textAll =''
+    if combine==0:
+        for recipe in recipes:
+            textRec =''
+            rec_name = recipe.get('name')
+            rec_portion = recipe.get('portion')
+
+            # Put all ingredients with details , each a dictionary, into a list for that recipe
+            listIngr = RecipeDict[rec_name].getIngrDetailsList(rec_portion)
+            textRec  = f'------------------------------------------------------------------------\n'
+            textRec += f'Recipe: {rec_name} for {rec_portion} portion(s)\n'
+            textRec += f'------------------------------------------------------------------------\n'
+            
+            # Get each ingredient for recipe
+            for ingr in listIngr:
+                for ingr_name, ingr_values in ingr.items():
+                    row = {
+                        'Recipe': rec_name,
+                        'Portion': rec_portion,
+                        'Ingredient': ingr_name,
+                        'IngredientKey': ingr_name.replace(" ","").upper(),
+                        'Amount': round(ingr_values.get('amount'), 2),
+                        'Unit': ingr_values.get('unit'),
+                        'Kcal': round(ingr_values.get('kcal'), 1),
+                        'Prot': round(ingr_values.get('prot'), 1)
+                    }
+                    all_rows.append(row)
+                    textAll += (f'Ingredient: {row["Ingredient"]}     Amount: {row["Amount"]} {row["Unit"]}       '
+                               f'Kcal: {row["Kcal"]}      Prot: {row["Prot"]}  \n')
+
+        # print(textAll)
+        df0 = pd.DataFrame(all_rows)#.sort_values(by='Recipe')
+        return df0
+
+    else:
+        combined_ingredients = defaultdict(lambda: {'amount': 0, 'unit': '', 'kcal': 0, 'prot': 0})
+
+        for recipe in recipes:
+            rec_name = recipe.get('name')
+            rec_portion = recipe.get('portion')
+            # Put all ingredients with details , each a dictionary, into a list for that recipe
+            listIngr = RecipeDict[rec_name].getIngrDetailsList(rec_portion)
+
+            # Get each ingredient for recipe
+            for ingr in listIngr:
+                for ingr_name, ingr_values in ingr.items():
+                    ingr_name_upper = ingr_name.replace(" ","").upper()
+                    current_unit = ingr_values['unit']
+
+                    if combined_ingredients[ingr_name_upper]['unit'] in ('', current_unit):
+                        combined_ingredients[ingr_name_upper]['amount'] += ingr_values['amount']
+                        combined_ingredients[ingr_name_upper]['kcal'] += ingr_values['kcal']
+                        combined_ingredients[ingr_name_upper]['prot'] += ingr_values['prot']
+                        combined_ingredients[ingr_name_upper]['unit'] = current_unit
+
+        for name, values in combined_ingredients.items():
+            all_rows.append({
+                'Ingredient': name,
+                'Amount': round(values['amount'], 2),
+                'Unit': values['unit'],
+                'Kcal': round(values['kcal'], 1),
+                'Prot': round(values['prot'], 1)
+            })
+        # Convert to dataframe
+        df1 = pd.DataFrame(all_rows).sort_values(by='Ingredient')
+
+        # Print formatted text
+        textAll = '------------------------------------------------------------------------\n'
+        textAll += 'Combined Grocery List:\n'
+        textAll += '------------------------------------------------------------------------\n'
+        for _, row in df1.iterrows():
+            textAll += (f'Ingredient: {row["Ingredient"]}     Amount: {row["Amount"]} {row["Unit"]}       '
+                        f'Kcal: {row["Kcal"]}      Prot: {row["Prot"]}  \n')
+        # print(textAll)
+
+        return df1
+
+def exportGroceryListToExcel(recipes):
+  # Get the DataFrames
+    df_combined = getGroceryList(combine=1, recipes=recipes)     # Combined totals
+    df_detailed = getGroceryList(combine=0, recipes=recipes)     # Per recipe
+  
+    # Export to one Excel file with two sheets
+    filename = f'grocery_list_{today}.xlsx'
+    
+
+    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+        df_combined.to_excel(writer, sheet_name='Combined', index=False)
+        df_detailed.to_excel(writer, sheet_name='Per Recipe', index=False)
+
+
+
+def makeKey(name):
+    return name.replace(' ','').upper()
+
+def getIngr(name):
+    if isinstance(name, str):
+        key = makeKey(name)
+        if key in IngredientDict:
+            return IngredientDict[key]
+        else:
+            print(f"Warning: Ingredient {name} (key={key}) not found in Ingredients")
+            return None
+    return name
+
+
+def getIngrKcal100g(ingredient):
+    ingredient = getIngr(ingredient)
+    return  float(ingredient.kcal_100g)
+
+def getIngrProt100g(ingredient):
+    ingredient = getIngr(ingredient)
+    return  float(ingredient.prot_100g )
+
+def getIngrGramPerUnit(ingredient):
+    ingredient = getIngr(ingredient)
+    return  float(ingredient.gramPerUnit)
+
+def getIngrKcalPerUnit(ingredient):
+    ingredient = getIngr(ingredient)
+    return  float(ingredient.kcal_unit)
+
+def getIngrProtPerUnit(ingredient):
+    ingredient = getIngr(ingredient)
+    return  float(ingredient.prot_unit)
+
+def getIngrProtPer100kcal(ingredient):
+    ingredient = getIngr(ingredient)
+    return  float(ingredient.protPer100Kcal)
+
+def getIngrKcal(ingredient, amount=0, unitOrGram='g'):
+        if is_number(amount):
+            ingredient_obj = getIngr(ingredient)
+            if not ingredient_obj:
+                return 0
+            unitOrGram = unitOrGram.strip().lower()
+            if unitOrGram == 'u':
+                return float(amount * getIngrKcalPerUnit(ingredient_obj))
+            if unitOrGram == 'g':
+                return float(amount * (getIngrKcal100g(ingredient_obj)/100))
+        else:
+            print(f'Amount must be numeric.')
+            return 0
+    
+def getIngrProt(ingredient, amount=0, unitOrGram='g'):
+        if is_number(amount):
+            ingredient_obj = getIngr(ingredient)
+            if not ingredient_obj:
+                return 0
+            unitOrGram = unitOrGram.strip().lower()
+            if unitOrGram == 'u':
+                return float(amount * getIngrProtPerUnit(ingredient_obj))
+            if unitOrGram == 'g':
+                return float(amount * (getIngrProt100g(ingredient_obj)/100))
+        else:
+            print(f'Amount must be numeric.')
+            return 0
+        
+def getRecipe(name):
+    key = makeKey(name)
+    if key in RecipeDict and isinstance(name, str):
+        return RecipeDict[key]
+    else:
+        print(f"Warning: Recipe '{name}' not found in RecipeDict.")
+    return None
+
+
+def getRecipeIngr(name):
+    recipe = getRecipe(name)
+    return recipe.ingredientsRecipe.items()
+
+def getRecipeLabel(recipe_name):
+    key = recipe_name.replace(" ", "").upper()
+    return RecipeDict[key].getLabel() if key in RecipeDict else recipe_name
+
+# print(getRecipeIngr('baguette') )
+
+def getRecipeKcal(name, portion=1):
+    total_kcal = 0
+    ingredients = getRecipeIngr(name)
+    # Loop over each ingredient in recipe
+    for key , values in ingredients:
+        ingredient = getIngr(key)
+        # Get amount and unit for Ingredient from Recipe
+        amount = values.get('amount')*portion 
+        unit = values.get('unit')
+        if key:
+            total_kcal += getIngrKcal(ingredient, amount, unit)
+    return round(float(total_kcal),2)
+
+def getRecipeProt(name, portion=1):
+    total_prot = 0
+    ingredients = getRecipeIngr(name)
+    # Loop over each ingredient in recipe
+    for key , values in ingredients:
+        ingredient = getIngr(key)
+        # Get amount and unit for Ingredient from Recipe
+        amount = values.get('amount')*portion 
+        unit = values.get('unit')
+        if key:
+            total_prot += getIngrProt(ingredient, amount, unit)
+    return round(float(total_prot),2)
+      
+def getRecipeProtPer100Kcal(name):
+    total_kcal = getRecipeKcal(name,1)
+    total_prot = getRecipeProt(name,1)
+    return round(float( total_prot/total_kcal*100 ),2 )
+
+def convert_to_units(df, unit_col="Unit", amount_col="Amount"):
+    """Convert g -> u where needed using getIngrGramPerUnit(ingredient)"""
+    df = df.copy()
+    df_all_g = df[unit_col] == "g"
+    df.loc[df_all_g, "Amount"] = df.loc[df_all_g].apply(
+        lambda row: row[amount_col] / getIngrGramPerUnit(row["Ingredient"]), axis=1
+    )
+    df["Unit"] = "u"
+    return df
+
+category_keywords = {
+    "Protein": ["KIP", "RUND", "VARKEN","SEITAN", "VIS", "EI", "TOFU", "LINZEN", "BONEN", "KALKOEN", "ZALM", "SCAMPI","MISO"],
+    "Vegetable": ["EDAMAME","LENTEUI","KERSTOMATEN","AUBERGINE","COURGETTE","CHAMPIGNONS","BROCCOLI", "SPINAZIE", "WORTEL", "TOMAAT", "AARDAPPEL", "UI", "PAPRIKA", "KOMKOMMER", "SPITSKKOOL", "BLOEMKOOL"],
+    "Carbohydrate": ["WRAP","SUIKER","RIJST", "PASTA", "BROOD", "CAVATAPPI", "SPAGHETTI", "BLOEM", "MAÏS", "GIST", "BAGUETTE","KETCHUP","MOSTERD"],
+    "Dairy": ["SKYR","FETA","MILK","MOZARELLA", "KAAS", "YOGHURT", "BOTER", "ROOM", "COTTAGE"],
+    "Fat": ["PEANUTBUTTER","OLIJFOLIE", "OLIE", "BUTTER", "MARGARINE", "AVOCADO", "NOTEN", "SEED"],
+    "Fruit": ["APPEL","AARDBEI", "BANAAN", "SINAASAPPEL", "MANDARIJN", "MANGO", "PEER", "PERZIK", "ANANAS", "DRUIVEN"],
+    "Kruiden" : ["OREGANO"],
+    "Liquide" : ["MIRIN","RIJSTAZIJN","LIMOENSAP","CITROENSAP","ZOUT","PEPER","SOYASAUS"]
 }
+
+veggie_keywords = {
+    "Meat" : ["KIP","RUND","BURGER","HAMBURGER","VARKEN","KALKOEN"],
+    "Fish" : ["SCAMPI","ZALM","ZALMFILET"]
+}
+ 
+seasonal_ingredients = {
+    "1":  ["WORTEL","RODEUI","PREI","MANDARIJN"],
+    "2":  ["WORTEL","RODEUI","PREI"],
+    "3":  ["WORTEL","RODEUI","PREI"],
+    "4":  ["APPEL","PREI","LENTEUI"],
+    "5":  ["APPEL","SPITSKOOL","LENTEUI","KOMKOMMER"],
+    "6":  ["APPEL","WORTEL","TOMAAT","SPITSKOOL","LENTEUI","KOMKOMMER","AARDBEI","BROCCOLI","COURGETTE","KERSTOMATEN"],
+    "7":  ["APPEL","WORTEL","TOMAAT","SPITSKOOL","RODEPAPRIKA","KOMKOMMER","AARDBEI","AUBERGINE","BROCCOLI","COURGETTE","KERSTOMATEN","KNOFLOOKTEEN"],
+    "8":  ["APPEL","WORTEL","TOMAAT","SPITSKOOL","RODEUI","RODEPAPRIKA","KOMKOMMER","AARDBEI","KNOFLOOKTEEN","AUBERGINE","BROCCOLI","COURGETTE","DRUIVEN","EDAMAME","KERSTOMATEN"],
+    "9":  ["APPEL","WORTEL","TOMAAT","SPITSKOOL","RODEUI","RODEPAPRIKA","KOMKOMMER","AUBERGINE","KNOFLOOKTEEN","BROCCOLI","COURGETTE","DRUIVEN","EDAMAME","KERSTOMATEN"],
+    "10": ["APPEL","WORTEL","SPITSKOOL","RODEUI","RODEPAPRIKA","PREI","BROCCOLI","KNOFLOOKTEEN","DRUIVEN"],
+    "11": ["APPEL","WORTEL","SPITSKOOL","RODEUI","PREI","MANDARIJN","BROCCOLI"],
+    "12": ["APPEL","WORTEL","RODEUI","PREI","MANDARIJN"]
+}
+
+def categorize_ingredient(ingredient):
+    ingredient_upper = ingredient.upper()
+    for category, keywords in category_keywords.items():
+        if any(keyword in ingredient_upper for keyword in keywords):
+            return category
+    return "Other"
+
+veggie_keywords = {
+    "Meat" : ["KIP","RUND","BURGER","HAMBURGER","VARKEN","KALKOEN"],
+    "Fish" : ["SCAMPI","ZALM","ZALMFILET"]
+}
+ 
+def is_veggie_ingredient(ingredient):
+    ingredient_upper = ingredient.upper()
+    for category, keywords in veggie_keywords.items():
+        if any(keyword in ingredient_upper for keyword in keywords):
+            return category
+    return "Other"
+
+
+def is_veggie_recipe(recipe_name):
+    ingredients = getRecipeIngr(recipe_name)
+    for key, _ in ingredients:
+        category = is_veggie_ingredient(key)
+        if category in ["Meat", "Fish"]:
+            return False
+    return True
+
+
+
+
+#ADD DATA
+def load_ingredients_from_excel(filepath):
+    IngredientDict.clear()
+    df = pd.read_excel(filepath,sheet_name='Ingredients')
+    for x, row in df.iterrows():
+        name=row['name']
+        gramPerUnit=row['gramPerUnit']
+        url=row.get('url','')
+        kcal_100g=row.get('kcal_100g','') 
+        prot_100g=row.get('prot_100g','')
+        priceurl=row.get('priceurl','')
+        Ingredient(name, gramPerUnit,url,kcal_100g,prot_100g,priceurl)
+
+def load_recipes_from_excel(filepath):
+    RecipeDict.clear()
+    df = pd.read_excel(filepath, sheet_name='Recipes')
+    grouped = df.groupby('recipe_name')
+
+    for recipe_name, group in grouped:
+        ingredientsRecipe = {}
+        for _, row in group.iterrows():
+            ingredient = row['ingredient']
+            amount = row['amount']
+            unit = row['unit']
+            ingredientsRecipe[ingredient] = {'amount': amount, 'unit': unit}
+        Recipe(recipe_name, ingredientsRecipe)
+
+def load_data_from_excel(filepath):
+    load_ingredients_from_excel(filepath)
+    load_recipes_from_excel(filepath)
+ 
+load_data_from_excel("Grocery_list\Excel_files\data.xlsx")
+
+# load_data_from_excel(DATA_FILE) 
