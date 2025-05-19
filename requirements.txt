@@ -5,3 +5,4 @@ plotly
 networkx    
 datasets
 plotly
+beautifulsoup4
