@@ -46,14 +46,18 @@ if page == "Grocery List Maker":
     RecipeDict.clear()
     df = pd.read_excel("./Excel_files/data.xlsx", sheet_name='Recipes')
     grouped = df.groupby('recipe_name')
+    st.write(grouped)
 
     for recipe_name, group in grouped:
+        st.write(recipe_name, group)
         ingredientsRecipe = {}
         for _, row in group.iterrows():
+            st.write(ingredient)
             ingredient = row['ingredient']
             amount = row['amount']
             unit = row['unit']
             ingredientsRecipe[ingredient] = {'amount': amount, 'unit': unit}
+         st.write(recipe_name, ingredientsRecipe)
         Recipe(recipe_name, ingredientsRecipe)
 
 
