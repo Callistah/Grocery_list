@@ -314,7 +314,7 @@ if page == "Grocery List Maker":
         if extra_ingredients or concatDF:
             combined = all_data.groupby(["Ingredient", "Unit"], as_index=False).sum()
             combined = combined[col_seq]
-            combined["Ingredient"] = combined["Ingredient"].getLabel()
+            combined["Ingredient"] = IngredientDict[combined["Ingredient"]].getLabel()
             st.dataframe(combined.set_index("Ingredient"), use_container_width=True)
 
 
