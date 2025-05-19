@@ -1,7 +1,6 @@
 streamlit 
 pandas 
 importlib 
-main 
 datetime 
 altair
 plotly.graph_objects
