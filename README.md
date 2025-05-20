@@ -1,6 +1,6 @@
 # Overview
 Look at my app at: [Grocery List Els](https://grocerylistels.streamlit.app/)
-
+# 
 Welcome to my project of weekly groceries. This project was created out of a desire to save time creating a weekly list and to be able to get insight into our weekly groceries. We are interested in nutritious diets and have formulated our standard recipes with their default ingredient lists for one portion.
 
 Every week we decided what recipes we will have and how many portions of each we need. We then make our grocery list and add extra ingredients. This was very time consuming and almost never deviates. During the period that we did this manually every week, I started wondering what recipes did we favor, what were the exact nutritional values, how many kcal , ... . 
