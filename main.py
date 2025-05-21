@@ -674,11 +674,6 @@ def categorize_ingredient(ingredient):
         if any(keyword in ingredient_upper for keyword in keywords):
             return category
     return "Other"
-
-veggie_keywords = {
-    "Meat" : ["KIP","RUND","BURGER","HAMBURGER","VARKEN","KALKOEN"],
-    "Fish" : ["SCAMPI","ZALM","ZALMFILET"]
-}
  
 def is_veggie_ingredient(ingredient):
     ingredient_upper = ingredient.upper()
