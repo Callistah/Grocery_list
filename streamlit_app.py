@@ -336,9 +336,9 @@ if page == "Grocery List Maker":
         buffer = io.BytesIO()
         today = date.today().isoformat()
         base_dir = r"C:\Users\elskn\Projects\Grocery_list"
-        file_path = os.path.join(base_dir, "Excel_files", "Export", f"Grocery_List_{today}.xlsx")
-        # file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
-        log_file_path = os.path.join(base_dir, "Excel_files", "Log", "Grocery_List_Log.xlsx")#'.\Excel_files\Log\Grocery_List_Log.xlsx'
+        # file_path = os.path.join(base_dir, "Excel_files", "Export", f"Grocery_List_{today}.xlsx")
+        file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
+        log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
 
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
             combined.to_excel(writer, index=False, sheet_name="Combined")
