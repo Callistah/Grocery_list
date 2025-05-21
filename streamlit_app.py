@@ -214,7 +214,7 @@ if page == "Grocery List Maker":
             portion = cols[1].number_input(
                 "Amount",
                 min_value=0,
-                max_value=1000,
+                max_value=100000,
                 step=1,
                 value=1,
                 key=f"portion_{row_id}"
