@@ -53,7 +53,7 @@ if page == "Grocery List Maker":
                 portion = st.number_input(
                     f"Portion for {RecipeDict[recipe].getLabel()}",
                     min_value=0,
-                    max_value=1000,
+                    max_value=100000,
                     value=default_portion,
                     step=1,
                     key=f'portion_{recipe}'
