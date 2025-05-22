@@ -1463,10 +1463,17 @@ elif page == "Data Analysis":
 
         with tab_rec_by_date:
             for export_date in sorted(recipes_by_date["ExportDate"].unique(), reverse=True):
+                df_recipe_date = f_df_per_recipe[f_df_per_recipe["ExportDate"]==export_date]
                 with st.expander(f"Recipes for {export_date.strftime('%B %d, %Y')}", expanded=False):
-                    day_data = recipes_by_date[recipes_by_date["ExportDate"] == export_date][["RecipeLabel", "Portion"]]
-                    st.dataframe(day_data.rename(columns={'RecipeLabel':'Recipe'}).set_index("Recipe"), use_container_width=True)
+                    df_table = df_recipe_date[ ["RecipeLabel", "Portion","IngredientLabel","Amount","Unit"] ]
+                    st.dataframe(df_table.rename(columns={'RecipeLabel':'Recipe','IngredientLabel':'Ingredient'}).set_index("Recipe"), use_container_width=True)
 
+
+        # with tab_rec_by_date:
+        #     for export_date in sorted(recipes_by_date["ExportDate"].unique(), reverse=True):
+        #         with st.expander(f"Recipes for {export_date.strftime('%B %d, %Y')}", expanded=False):
+        #             day_data = recipes_by_date[recipes_by_date["ExportDate"] == export_date][["RecipeLabel", "Portion"]]
+        #             st.dataframe(day_data.rename(columns={'RecipeLabel':'Recipe'}).set_index("Recipe"), use_container_width=True)
 
         with tab_comb_by_date:
             grouped_by_date = f_df_combined.groupby("ExportDate")
