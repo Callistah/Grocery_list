@@ -208,6 +208,7 @@ if page == "Grocery List Maker":
 
         default=st.session_state.selected_last_extras
     )
+    
 
     
     if "selected_last_extras_prev" not in st.session_state:
