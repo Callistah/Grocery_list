@@ -11,8 +11,9 @@ from itertools import combinations
 from collections import Counter
 import random  
 from Colruyt_scraping.colruyt_scraper_price import *
+import uuid
 
-#CMD: streamlit run Grocery_list\streamlit_app.py
+#CMD run locally: streamlit run streamlit_app.py
 
 # --- Configure page layout ---
 st.set_page_config(layout='wide', initial_sidebar_state='expanded')
@@ -32,8 +33,19 @@ if "selected_recipes" not in st.session_state:
     st.session_state.selected_recipes = {}
 if "extra_rows" not in st.session_state:
     st.session_state.extra_rows = []
-if "next_extra_id" not in st.session_state:
-    st.session_state.next_extra_id = 0
+# if "next_extra_id" not in st.session_state:
+#     st.session_state.next_extra_id = 0
+    
+if "selected_last_extras" not in st.session_state:
+    st.session_state.selected_last_extras = []
+if "last_extra_map" not in st.session_state:
+    st.session_state.last_extra_map = {}
+if "last_extra_ids" not in st.session_state:
+    st.session_state.last_extra_ids = {}
+
+if "reused_extra_ids" not in st.session_state:
+    st.session_state.reused_extra_ids = set()
+    
 st.sidebar.title("Settings")
 
 
@@ -63,7 +75,6 @@ if page == "Grocery List Maker":
                 st.session_state.selected_recipes.pop(recipe, None)
 
     selected = st.session_state.selected_recipes
-
 
     # if selected:
     ingredient_options = {
@@ -142,143 +153,297 @@ if page == "Grocery List Maker":
             st.sidebar.markdown(f"- {label}")
 
 
-    extra_ingredients = []
-    st.sidebar.subheader("Add Extra Ingredients")
-    if st.sidebar.radio(f"Add extra stuff? _Ingredients with ⭐ are seasonal!_", ["No", "Yes"]) == "Yes":
+    # Load previous export data for extra ingredients reuse
+    if os.path.exists(log_file_path):
+        df_log = pd.read_excel(log_file_path, sheet_name="Log Combined")
+        df_log["ExportDate"] = pd.to_datetime(df_log["ExportDate"])
+        latest_date = df_log["ExportDate"].max()
+        df_latest = df_log[df_log["ExportDate"] == latest_date].copy()
 
-        def add_extra_row():
-            st.session_state.extra_rows.append(st.session_state.next_extra_id)
-            st.session_state.next_extra_id += 1
+        # Remove recipe-linked ingredients
+        if os.path.exists(log_file_path):
+            df_log_per_recipe = pd.read_excel(log_file_path, sheet_name="Log Per Recipe")
+            df_log_per_recipe["ExportDate"] = pd.to_datetime(df_log_per_recipe["ExportDate"])
+            df_latest_rec = df_log_per_recipe[df_log_per_recipe["ExportDate"] == latest_date]
 
-        st.sidebar.button("\u2795 Add Extra Ingredient", on_click=add_extra_row , key="add_extra_sidebar")
+            df_grouped_combined = df_latest.groupby(["Ingredient", "Unit"], as_index=False)["Amount"].sum()
+            df_grouped_recipe = df_latest_rec.groupby(["Ingredient", "Unit"], as_index=False)["Amount"].sum()
+            df_extras_only = pd.merge(
+                df_grouped_combined,
+                df_grouped_recipe,
+                on=["Ingredient", "Unit"],
+                how="left",
+                suffixes=("_combined", "_recipe")
+            )
+            df_extras_only["Amount_recipe"] = df_extras_only["Amount_recipe"].fillna(0)
+            df_extras_only["Amount"] = df_extras_only["Amount_combined"] - df_extras_only["Amount_recipe"]
+            df_extras_only = df_extras_only[df_extras_only["Amount"] > 0][["Ingredient", "Unit", "Amount"]]
 
-        if "row_to_remove" in st.session_state:
-            row_id = st.session_state.pop("row_to_remove")
+            # Create unique label map for multiselect
+            last_extra_map = {
+                f"{row['Ingredient']} ({int(row['Amount'])} {row['Unit']})": row
+                for _, row in df_extras_only.iterrows()
+            }
+            st.session_state.last_extra_map = last_extra_map
+
+    if "last_extra_map" in st.session_state:
+        # On first load, if no extras have been loaded yet
+        if not st.session_state.extra_rows and not st.session_state.last_extra_ids:
+            for label, row in st.session_state.last_extra_map.items():
+                rid = str(uuid.uuid4())
+                st.session_state.last_extra_ids[label] = rid
+                st.session_state.extra_rows.append(rid)
+                st.session_state[f"ing_{rid}"] = row["Ingredient"]
+                st.session_state[f"portion_{rid}"] = int(row["Amount"])
+                st.session_state[f"TypeOfUnit_{rid}"] = row["Unit"]
+                st.session_state.reused_extra_ids.add(rid)
+
+    st.sidebar.subheader("Add extra ingredients from last list")
+    all_extra_labels = list(st.session_state.last_extra_map.keys())
+    available_extras = [label for label in all_extra_labels if label not in st.session_state.selected_last_extras]
+    selected_reused = st.sidebar.multiselect(
+        "↺ Reuse previous extra ingredients?",
+        options=all_extra_labels,
+        key="selected_last_extras",
+
+        default=st.session_state.selected_last_extras
+    )
+
+    
+    if "selected_last_extras_prev" not in st.session_state:
+        st.session_state.selected_last_extras_prev = []
+
+    previous_selection = st.session_state.selected_last_extras_prev
+    
+    
+    # Calculate added and removed extras compared to last time
+    added = set(selected_reused) - set(previous_selection)
+    removed = set(previous_selection) - set(selected_reused)
+
+    # Update session state for extras only when there are changes
+    if added or removed:
+        # Update last selected extras in session state (but *only* once here!)
+        
+        # Now, update extra_rows and last_extra_ids accordingly
+        # Remove extras that were removed
+        if removed:
+            # Remove from extra_rows and last_extra_ids
+            for label in removed:
+                if label in st.session_state.last_extra_ids:
+                    rid = st.session_state.last_extra_ids.pop(label)
+                    if rid in st.session_state.extra_rows:
+                        st.session_state.extra_rows.remove(rid)
+                    # Remove related session state keys
+                    for key in [f"ing_{rid}", f"portion_{rid}", f"TypeOfUnit_{rid}"]:
+                        st.session_state.pop(key, None)
+                        # selected_reused = [item for item in selected_reused if key not in item]
+                        selected_reused = [item for item in selected_reused if key not in item or f"{key} ⭐" not in item]
+                        
+
+                    st.session_state.reused_extra_ids.discard(rid)
+
+
+        # Add new extras that were added
+        for label in added: 
+            if label not in st.session_state.last_extra_ids:
+                rid = str(uuid.uuid4())
+                st.session_state.last_extra_ids[label] = rid
+                st.session_state.extra_rows.append(rid)
+                # Get data from last_extra_map to populate fields
+                row = st.session_state.last_extra_map[label]
+                ingr_name = row["Ingredient"]
+                amount = int(row["Amount"])
+                unit = row["Unit"]
+
+                st.session_state[f"ing_{rid}"] = ingr_name
+                st.session_state[f"portion_{rid}"] = amount
+                st.session_state[f"TypeOfUnit_{rid}"] = unit
+                st.session_state.reused_extra_ids.add(rid)
+
+    for label in removed:
+        if label in st.session_state.last_extra_ids:
+            row_id = st.session_state.last_extra_ids.pop(label)
             if row_id in st.session_state.extra_rows:
                 st.session_state.extra_rows.remove(row_id)
-                st.session_state.pop(f'ing_{row_id}',None)
-                st.session_state.pop(f'portion_{row_id}',None)
+            for key in [f"ing_{row_id}", f"portion_{row_id}", f"TypeOfUnit_{row_id}"]:
+                if key in st.session_state:
+                    del st.session_state[key]
+                    # selected_reused = [item for item in selected_reused if key not in item]
+                    selected_reused = [item for item in selected_reused if key not in item or f"{key} ⭐" not in item]
+
+            st.session_state.reused_extra_ids.discard(row_id)
+
+    extra_ingredients = []
+    # st.sidebar.subheader("Add Extra Ingredients")
+
+    def remove_ingredient(ingredient):
+        if ingredient in st.session_state.selected_reused:
+            st.session_state.selected_reused.remove(ingredient)
         
+    def add_extra_row():
+        new_id = str(uuid.uuid4())
+        st.session_state.extra_rows.append(new_id)
 
-        rows_to_remove = [] 
+    def sync_reused_extras():
+        for label in st.session_state.selected_last_extras:
+            if label not in st.session_state.last_extra_ids:
+                rid = str(uuid.uuid4())
+                st.session_state.last_extra_ids[label] = rid
+                st.session_state.extra_rows.append(rid)
+                row = st.session_state.last_extra_map[label]
+                st.session_state[f"ing_{rid}"] = row["Ingredient"]
+                st.session_state[f"portion_{rid}"] = int(row["Amount"])
+                st.session_state[f"TypeOfUnit_{rid}"] = row["Unit"]
+                st.session_state.reused_extra_ids.add(rid)
 
-        rows_to_keep = []
-        used_ingredients =[]
-        for row_id in st.session_state.extra_rows:
-            cols = st.columns([4, 3, 2, 1])
+        # Also remove any rows in extra_rows that correspond to labels no longer selected
+        labels_to_remove = [label for label, rid in st.session_state.last_extra_ids.items()
+                            if label not in st.session_state.selected_last_extras]
+        for label in labels_to_remove:
+            rid = st.session_state.last_extra_ids.pop(label)
+            if rid in st.session_state.extra_rows:
+                st.session_state.extra_rows.remove(rid)
+            for key in [f"ing_{rid}", f"portion_{rid}", f"TypeOfUnit_{rid}"]:
+                st.session_state.pop(key, None)
+            st.session_state.reused_extra_ids.discard(rid)
 
-            available_ingredients = sorted(
-                [label for label in ingredient_options if label not in used_ingredients]
-                )
-            
-            if not available_ingredients:
-                st.warning("No more ingredients to add.")
-                break  # or continue to next row
+    if "row_to_remove" in st.session_state:
+        row_id = st.session_state.pop("row_to_remove")
+        if row_id in st.session_state.extra_rows:
+            st.session_state.extra_rows.remove(row_id)
+            for key in [f"ing_{row_id}", f"portion_{row_id}", f"TypeOfUnit_{row_id}", f"delete_{row_id}"]:
+                st.session_state.pop(key, None)
+            st.session_state.reused_extra_ids.discard(row_id)
 
-            
-            # Build display name map: bold seasonal ingredients
-            seasonal_ingr_display = {}
-            for ing in available_ingredients:
-                ing_upper = ing.replace(" ", "").upper()
-                if ing_upper in seasonal_this_month:
-                    seasonal_ingr_display[f"{ing} ⭐"] = ing  # bold version
-                else:
-                    seasonal_ingr_display[ing] = ing
+            to_remove = [label for label, rid in st.session_state.last_extra_ids.items() if rid == row_id]
+            for label in to_remove:
+                st.session_state.last_extra_ids.pop(label, None)
+                if label in st.session_state.selected_last_extras:
+                    st.session_state.selected_last_extras.remove(label)
+                    # selected_reused = [item for item in selected_reused if label not in item]
+                    selected_reused = [item for item in selected_reused if label not in item or f"{label} ⭐" not in item]
+                    
+    sync_reused_extras()
+    rows_to_keep = []
+    used_ingredients = []
+    unit_options = ['u', 'g']
+    exit_loop = False  
+    for row_id in st.session_state.extra_rows:
+        # Skip rendering if the row was marked for deletion
+        if f"delete_{row_id}" in st.session_state and st.session_state[f"delete_{row_id}"]:
+            continue
+        
+        is_reused = row_id in st.session_state.reused_extra_ids
+        cols = st.columns([4, 3, 2, 1])  # 1 column added for delete button
 
-            select_options = ["Select an ingredient..."] + list(seasonal_ingr_display.keys()) #+ available_ingredients
-            prev_selection = st.session_state.get(f"ing_{row_id}", "Select an ingredient...")
-            # Convert previous selection to bold if needed
-            for display, original in seasonal_ingr_display.items():
-                if original == prev_selection:
-                    prev_selection_display = display
+        current_ingr = st.session_state.get(f"ing_{row_id}", "").replace(" ⭐", "")
+        available_ingredients = sorted([
+            label for label in ingredient_options
+            if (label not in used_ingredients and 
+                label not in [row['Ingredient'] for label, row in st.session_state.last_extra_map.items() if label in st.session_state.selected_last_extras]) 
+            or label == current_ingr
+        ])
+
+        if not available_ingredients:
+            st.warning("No more ingredients to add.")
+            break
+
+        seasonal_ingr_display = {}
+        for ing in available_ingredients:
+            ing_upper = ing.replace(" ", "").upper()
+            if ing_upper in seasonal_this_month:
+                seasonal_ingr_display[f"{ing} ⭐"] = ing
+            else:
+                seasonal_ingr_display[ing] = ing
+
+        select_options = ["Select an ingredient..."] + list(seasonal_ingr_display.keys())
+        prev_selection = st.session_state.get(f"ing_{row_id}", "Select an ingredient...")
+
+        for display, original in seasonal_ingr_display.items():
+            if original == prev_selection:
+                prev_selection_display = display
+                break
+        else:
+            prev_selection_display = "Select an ingredient..."
+
+        ingr_name = cols[0].selectbox(
+            f"Extra Ingredient",
+            options=select_options,
+            index=select_options.index(prev_selection_display) if prev_selection_display in select_options else 0,
+            key=f"ing_{row_id}"
+        )
+        
+        portion = cols[1].number_input(   
+            "Amount",
+            min_value=0,
+            max_value=100000,
+            step=1,
+            value=st.session_state.get(f"portion_{row_id}", 1),
+            key=f"portion_{row_id}"
+        )
+
+        unit = cols[2].selectbox(
+            "Type of Units",
+            options=unit_options,
+            index=unit_options.index(st.session_state.get(f"TypeOfUnit_{row_id}", 'u')),
+            key=f"TypeOfUnit_{row_id}"
+        )
+        
+        # Remove matching labels from selected_last_extras and last_extra_ids
+        def get_base_name(label):
+            return label.split(" (")[0].strip().lower()
+      
+    
+        with cols[3]:
+            # Check if it's from the sidebar multiselect
+            from_sidebar = False
+            label_from_sidebar = None
+
+            for label, rid in st.session_state.last_extra_ids.items():
+                if rid == row_id:
+                    label_from_sidebar = label
+                    from_sidebar = True
                     break
+
+            if from_sidebar:
+                # Instead of delete button, show notice
+                st.markdown(
+                    f"<span style='color: gray; font-size: 0.6em; font-style: italic;'>Remove from sidebar</span>",
+                    unsafe_allow_html=True
+                )
             else:
-                prev_selection_display = "Select an ingredient..."
+                # 🗑️ DELETE BUTTON  
+                if st.button("🗑️", key=f"delete_{row_id}"):  
+                    st.session_state.extra_rows.remove(row_id)
+                    st.session_state.reused_extra_ids.discard(row_id)
+
+                    # Remove associated session state
+                    for key in [f"ing_{row_id}", f"portion_{row_id}", f"TypeOfUnit_{row_id}"]:
+                        st.session_state.pop(key, None)
 
 
+        if portion > 0 and ingr_name and ingr_name != "Select an ingredient...":
+            ingr_name_clean = ingr_name.replace(" ⭐", "")
+            if ingr_name_clean in ingredient_options:
+                ingr_key, ingr_obj = ingredient_options[ingr_name_clean]
+                extra_ingredients.append({
+                    "Ingredient": ingr_obj.getLabel(),
+                    "IngredientKey": ingr_key,
+                    "Unit": unit,
+                    "Amount": portion
+                })
+                # Add to used_ingredients only if not reused to prevent duplicate filtering
+                if row_id not in st.session_state.reused_extra_ids:
+                    used_ingredients.append(ingr_name_clean)
 
-            unit_options =['u','g']
-            # Make sure previous selection is still valid
-            if prev_selection in select_options and prev_selection != 'Select an ingredient...':
-                default_index = select_options.index(prev_selection)
-            else:
-                default_index = 0  # fallback to first option
+        rows_to_keep.append(row_id)
+    # if not exit_loop:
 
-            ingr_name = cols[0].selectbox(
-                "Extra Ingredient",
-                options=select_options,
-                index=default_index,#0,
-                key=f"ing_{row_id}"
-            )
             
-            portion = cols[1].number_input(
-                "Amount",
-                min_value=0,
-                max_value=100000,
-                step=1,
-                value=1,
-                key=f"portion_{row_id}"
-            )
+    st.session_state.extra_rows = rows_to_keep
 
-            unit = cols[2].selectbox(
-                "Type of Units",
-                options=unit_options,
-                index=0,#default_index,#0,
-                key=f"TypeOfUnit_{row_id}"
-            )
+    st.button("➕ Add Extra Ingredient", on_click=add_extra_row, key="add_extra_bottom")
 
-            if cols[2].button("🗑️", key=f"remove_{row_id}"):
-                st.session_state.row_to_remove = row_id
-            else: 
-                rows_to_keep.append(row_id)
-
-                # if not remove:
-                if portion > 0 and ingr_name and ingr_name != "Select an ingredient...":
-                    ingr_name = ingr_name.replace(" ⭐", "")  # <- Strip star
-                    if ingr_name in ingredient_options: 
-                        ingr_key, ingr_obj = ingredient_options[ingr_name]
-                        extra_ingredients.append({
-                                        "Ingredient": ingr_obj.getLabel(),
-                                        "IngredientKey": ingr_key,
-                                        "Unit": unit,
-                                        "Amount": portion
-                                })
-                        used_ingredients.append(ingr_name)
-
-
-
-        st.session_state.extra_rows = rows_to_keep
-
-        # --- Extra add button (under ingredient inputs) ---
-        st.button("➕ Add Extra Ingredient", on_click=add_extra_row, key="add_extra_bottom")
-
-
-    # priceurls = []
-    # price_file = "Grocery_List/Excel_files/Log/Scraping_prices.xlsx"
-    # # Extract URLs from your ingredients or load from your data file
-
-    # for ingr in IngredientDict:
-    #     priceurls.append( {ingr:IngredientDict[ingr].priceurl})
-
-
-    # # st.write(priceurls[:3] ) #aardbei ,appel, anjovis
-    # # Sidebar UI
-    # st.sidebar.subheader("Price Updater")
-    # if st.sidebar.button("Update Prices"):
-    #     st.sidebar.info("Updating prices... This will take a while.")
-    #     # Call your scraping function with all URLs
-    #     df_prices = scrape_all_prices(priceurls[:5], "Grocery_List/Excel_files/Log/Scraping_prices.xlsx")
-    #     st.sidebar.success("Price update complete! Saved to Scraping_prices.xlsx")
-
-    # # Later in the app, you can read the prices file without scraping again
-    # if price_file.exists():
-    #     df_prices = pd.read_excel(price_file)
-    #     st.write("Prices loaded from file:")
-    #     st.dataframe(df_prices)
-    # else:
-    #     st.warning("Price data not found. Please click 'Update Prices' in the sidebar to scrape prices.")
-
-        # st.write(df_prices )
 
     st.sidebar.subheader("Display Options")
     tab1, tab2 = st.tabs(["All Ingredients", "Per Recipe"])
@@ -315,7 +480,6 @@ if page == "Grocery List Maker":
         if extra_ingredients or concatDF:
             combined = all_data.groupby(["Ingredient", "Unit"], as_index=False).sum()
             combined = combined[col_seq]
-            # combined["Ingredient"] = IngredientDict[combined["Ingredient"]].getLabel()
             st.dataframe(combined.set_index("Ingredient"), use_container_width=True)
 
 
@@ -328,7 +492,6 @@ if page == "Grocery List Maker":
 
                 with st.expander(f"{recipe_label} - {portion} portion(s)", expanded=False):
                     st.dataframe(df.set_index('Ingredient'), use_container_width=True)
-                # st.dataframe(df.set_index('Ingredient'), use_container_width=True)
 
 
 
@@ -472,13 +635,6 @@ elif page == "Data Analysis":
 
         f_df_combined['IngredientKey'] = f_df_combined['Ingredient'].str.strip().str.upper().str.replace(" ","", regex=False)
         f_df_combined['IngredientLabel'] = f_df_combined['Ingredient'].map(lambda r: IngredientDict[r].getLabel() if r in IngredientDict else r)
-
-
-        # # Filter by Ingredient or Recipe
-        # ingredient_filter = st.sidebar.selectbox("Focus on Ingredient", ["All"] + sorted(df_log_combined["Ingredient"].unique()))
-        # if ingredient_filter != "All":
-        #     f_df_combined = f_df_combined[f_df_combined["Ingredient"] == ingredient_filter]
-
 
             # Group and sum
         result_comb_df = (
@@ -1362,10 +1518,6 @@ elif page == "Data Analysis":
                 pairs = combinations(set(ing_list), 2 )
                 for pair in pairs:
                     edge_counter[tuple(sorted(pair) ) ] +=1
-            # for ingredients in recipe_ingredients:
-            #     pairs = combinations(set(ingredients), 2)
-            #     for pair in pairs:
-            #         edge_counter[tuple(sorted(pair))] += 1
 
             edges_df = pd.DataFrame(
                 [(i[0], i[1], count) for i, count in edge_counter.items()],
@@ -1438,17 +1590,6 @@ elif page == "Data Analysis":
 # END OF VISUALS
 ###########################################################################################################
 
-        # filtered_csv = f_df_combined.to_csv(index=False).encode("utf-8")
-        # st.sidebar.download_button(
-        #     "Download Filtered Data",
-        #     data=filtered_csv,
-        #     file_name="filtered_grocery_data.csv",
-        #     mime="text/csv"
-        # )
-
-        # with st.expander(f"Sum of Ingredients for {len(selected_dates)} Date(s)", expanded=False):
-        #      st.dataframe(result_comb_df.set_index("Ingredient"), use_container_width=True)
-        
         tab_rec_by_date, tab_comb_by_date, tab_sum_all = st.tabs([
             "Recipes by Date",
             "Combined by Date", 
@@ -1467,13 +1608,6 @@ elif page == "Data Analysis":
                 with st.expander(f"Recipes for {export_date.strftime('%B %d, %Y')}", expanded=False):
                     df_table = df_recipe_date[ ["RecipeLabel", "Portion","IngredientLabel","Amount","Unit"] ]
                     st.dataframe(df_table.rename(columns={'RecipeLabel':'Recipe','IngredientLabel':'Ingredient'}).set_index("Recipe"), use_container_width=True)
-
-
-        # with tab_rec_by_date:
-        #     for export_date in sorted(recipes_by_date["ExportDate"].unique(), reverse=True):
-        #         with st.expander(f"Recipes for {export_date.strftime('%B %d, %Y')}", expanded=False):
-        #             day_data = recipes_by_date[recipes_by_date["ExportDate"] == export_date][["RecipeLabel", "Portion"]]
-        #             st.dataframe(day_data.rename(columns={'RecipeLabel':'Recipe'}).set_index("Recipe"), use_container_width=True)
 
         with tab_comb_by_date:
             grouped_by_date = f_df_combined.groupby("ExportDate")
