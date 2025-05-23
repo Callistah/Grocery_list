@@ -2,23 +2,12 @@
 # pip install streamlit
 
 # Importing Libraries
-from datasets import load_dataset 
 from datetime import date   
-from collections import defaultdict
 import pandas as pd
 import math
-from pathlib import Path
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "Colruyt_scraping")))
-from colruyt_scraper import get_nutritional_data
-# Use home made scraper to get nutritional value for a product from a link
-# from Colruyt_scraping.colruyt_scraper import get_nutritional_data
-# from Colruyt_scraping.colruyt_scraper_price import *
-
-BASE_DIR = Path.cwd()
-DATA_FILE = BASE_DIR / "Excel_files" / "data.xlsx"
-
 
 # Global dictionaries
 IngredientDict = {}
@@ -35,8 +24,7 @@ def is_number(x):
         return False
     
 
-# Make a class for Ingrdient 
-# Append to IngredientDict on creation
+# Make a class for Ingrdient => Append to IngredientDict on creation
 class Ingredient:
     def __init__(self,name, gramPerUnit, url='', Kcal_100g='', Prot_100g='', priceurl=''):
         self.name = name 
@@ -46,38 +34,11 @@ class Ingredient:
         self.prot_100g = float(Prot_100g)
         name_key = self.name.replace(" ","").upper()
         self.priceurl = priceurl
-        # IngredientDict[name] = self
 
         # Only add object to IngredientDict if does not already exist
         if name_key in IngredientDict:
             print(f'Ingredient {self.name} already exists')
             return
-        
-        # # Get data from url
-        # data = get_nutritional_data(url)
-
-        # # URL did not work
-        # if data.empty:
-        #     # If URL fails, check if manual values are usable
-        #     if not is_number(Kcal_100g) or not is_number(Prot_100g):
-        #         print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')
-        #         return
-        #     #URL didn't work BUT we have manual data
-        #     self.kcal_100g = float(Kcal_100g)
-        #     self.prot_100g = float(Prot_100g)
-        # #URL works : Get the nutritional data
-        # else:
-        #     try:
-        #         self.kcal_100g = self.getKcalPer100g(data)
-        #         self.prot_100g = self.getProtPer100g(data)
-        #     except Exception as e:
-        #         print(f'Failed to extract nutritional data from URL for {self.name}: {e}')
-        #         return 
-
-        # # If URL gives empty dataframe : Check if kcal_100g and prot_100g are both filled in and numeric  
-        # if data.empty and (not is_number(Kcal_100g) or not is_number(Prot_100g)): 
-        #     print(f'Ingredient URL for {self.name} cannot be used. Enter data manually')
-        #     return
 
         # Calculate the unit values
         self.kcal_unit = (gramPerUnit * ( self.kcal_100g/100) ) if self.kcal_100g>0 else 0
@@ -86,93 +47,13 @@ class Ingredient:
     
         # Add the ingredient to the global dictionary
         IngredientDict[name_key] = self
-
+        
+    # Methods for Ingredient Object
     def getLabel(self):
         return self.name
-    
-    def getKey(self):
-        return self.name.replace(" ","").upper()
-    
-    def show(self):
-        text =  f'-----------------------------------------------\n'
-        text += f'Ingredient {self.name}\n'
-        text += f'-----------------------------------------------\n'
-        text += f'URL : {self.url}\n'
-        text += f'KCal / 100g : {self.kcal_100g}\n'
-        text += f'Prot / 100g : {self.prot_100g}\n'
-        text += f'Gram / unit : {self.gramPerUnit}\n'
-        text += f'KCal / unit : {self.kcal_unit}\n'
-        text += f'Prot / unit : {self.prot_unit}\n'
-        text += f'Prot / 100KCal : {self.protPer100Kcal}\n'
-        text += f'-----------------------------------------------\n'
-        print(text)
 
-    def doesIngredientExist(self):
-        if self.name.replace(" ","").upper() in IngredientDict:
-            return True
-
-    def getProtPer100g(self, data=None):
-        # data = data or get_nutritional_data(self.url)
-        return float(data.loc[data['Nutrition'] == 'Eiwitten']['Value'].values[0])
-    
-    def getKJPer100g(self, data=None):
-        # data = data or get_nutritional_data(self.url)
-        return float(data.loc[data['Nutrition'] == 'Energie kJ']['Value'].values[0])
-    
-    def getKcalPer100g(self, data=None):
-        # data = data or get_nutritional_data(self.url)
-        if data[data['Nutrition'] == 'Energie kcal']['Value'].empty:
-            return self.getKJPer100g(data)/ 4.184
-        else:
-            return float(data.loc[data['Nutrition'] == 'Energie kcal']['Value'].values[0])
-    def getFatPer100g(self):
-        data = get_nutritional_data(self.url)
-        return float(data.loc[data['Nutrition'] == 'Totaal vetten']['Value'].values[0])
-    def getCarbsPer100g(self):
-        data = get_nutritional_data(self.url)
-        return float(data.loc[data['Nutrition'] == 'Totaal koolhydraten']['Value'].values[0])
-    def getSugarPer100g(self):
-        data = get_nutritional_data(self.url)
-        return float(data.loc[data['Nutrition'] == 'Suikers']['Value'].values[0])
-    def getFiberPer100g(self):
-        data = get_nutritional_data(self.url)
-        return float(data.loc[data['Nutrition'] == 'Vezels']['Value'].values[0])
-    def getSaltPer100g(self):
-        data = get_nutritional_data(self.url)
-        return float(data.loc[data['Nutrition'] == 'Zout']['Value'].values[0])
-    
-    def getKcal(self,amount,unit='g'):
-        if is_number(amount):
-            if unit == 'g':
-                return self.kcal_100g * (amount/100)
-            if unit == 'u':
-                return self.kcal_unit * amount
-        else:
-            print(f'Amount must be numeric.')
-            return 0
-    def getProt(self,amount,unit='g'):
-        if is_number(amount):
-            if unit == 'g':
-                return self.prot_100g * (amount/100)
-            if unit == 'u':
-                return self.prot_unit * amount
-        else:
-            print(f'Amount must be numeric.')
-            return 0
-    
-    def getGram(self,unitAmount):
-        if is_number(unitAmount):
-            return unitAmount * self.gramPerUnit
-        else:
-            print(f'Amount must be numeric.')
-    def getUnit(self,gramAmount):
-        if is_number(gramAmount):
-            return gramAmount / self.gramPerUnit
-        else:
-            print(f'Amount must be numeric.')
         
-# Make a class for Recipe 
-# Append to RecipeDict on creation
+# Make a class for Recipe => Append to RecipeDict on creation
 class Recipe:
     def __init__(self,name,ingredientsRecipe={}):
         self.name = name 
@@ -188,18 +69,9 @@ class Recipe:
                 key1 = ingredient
                 key2 = ingredient.replace(" ", "").upper()
                 if key1 not in IngredientDict and key2 not in IngredientDict:
-                #if ingredient not in IngredientDict and ingredient.replace(" ","").upper() not in IngredientDict :
-                #if ingredient.replace(" ","").upper() not in IngredientDict:
                     print(f"Cannot add recipe {self.name}. Ingredient '{ingredient}' is not in the global ingredient list.")
                     return
 
-        # # Only add recipe to RecipeDict if does not already exist
-        # if not self.doesRecipeExist():
-        #     self.addToRecipeDict()
-        # else:
-        #     print(f'Recipe {self.name} already exists')
-        #     return
-        
         # Only add object to RecipeDict if does not already exist
         if name_key in RecipeDict:
             print(f'Recipe {self.name} already exists')
@@ -208,100 +80,10 @@ class Recipe:
         # Add the ingredient to the global dictionary
         RecipeDict[name_key] = self
 
-    def show(self, portion=1):
-        text =  f'---------------------------------------------------------\n'
-        text += f'Recipe {self.name} ({portion} portion(s)) - Ingredients\n'
-        text += f'---------------------------------------------------------\n'
-        for ing_name, values in self.ingredientsRecipe.items():
-            text += f'Ingredient {ing_name} :  {values.get("amount")*portion} {values.get("unit").replace("u","UNIT")}\n' 
-        text += f'---------------------------------------------------------\n'
-        print(text)
 
+    # Methods for Recipe Object
     def getLabel(self):
         return self.name
-    
-    def getKey(self):
-        return self.name.replace(" ","").upper()
-
-    def showDetails(self, portion=1):
-        text =  f'---------------------------------------------------------\n'
-        text += f'Recipe {self.name} ({portion} portion(s)) - Ingredients Details\n'
-        text += f'---------------------------------------------------------\n'
-        for ing_name, values in self.ingredientsRecipe.items():
-            text += f'Ingredient {ing_name} :  {values.get("amount")*portion} {values.get("unit").replace("u","UNIT")}\n' 
-            amount = values.get('amount')*portion 
-            unit = values.get('unit')
-            
-            #Get my object for this ingredient
-            ingredientGlobal = IngredientDict.get(ing_name.replace(" ","").upper()) 
-            if ingredientGlobal: 
-                text += f'          => Kcal: {round(ingredientGlobal.getKcal(amount, unit),2)}   => Prot: {round(ingredientGlobal.getProt(amount, unit),2)} \n' 
-        text += f'---------------------------------------------------------\n'
-        text += f'Total => Kcal: {round(self.getTotalKcal(portion),2)}   => Prot: {round(self.getTotalProt(portion),2)}  \n' 
-        text += f'---------------------------------------------------------\n'
-        print(text)
-        
-    # def addToRecipeDict(self):
-    #     RecipeDict[self.name.upper()] = self
-    
-    def doesRecipeExist(self):
-        if self.name.replace(" ","").upper() in RecipeDict:
-            return True
-        else:
-            return False
-    
-    # Recipe Functions
-    def getTotalKcal(self,portion=1):
-        # Loop over each ingredient
-        total_kcal = 0
-        for ing_name , values in self.ingredientsRecipe.items():
-            amount = values.get('amount')*portion 
-            unit = values.get('unit')
-
-            #Get my object for this ingredient
-            ingredientGlobal = IngredientDict.get(ing_name.replace(" ","").upper()) 
-            if ingredientGlobal: 
-                #Calculate the kcal for this ingredient
-                total_kcal += ingredientGlobal.getKcal(amount, unit)
-
-        return round(total_kcal,2)
-    def getTotalProt(self,portion=1):
-        # Loop over each ingredient
-        total_prot = 0
-        for ing_name , values in self.ingredientsRecipe.items():
-            amount = values.get('amount')*portion 
-            unit = values.get('unit')
-
-            #Get my object for this ingredient
-            ingredientGlobal = IngredientDict.get(ing_name.replace(" ","").upper()) 
-            if ingredientGlobal: 
-                #Calculate the kcal for this ingredient
-                total_prot += ingredientGlobal.getProt(amount, unit)
-
-        return round(total_prot,2)
-    def getIngrList(self):
-        listIngr = []
-        for ing_name, values in self.ingredientsRecipe.items():
-            listIngr.append(ing_name)
-        return listIngr
-    def getIngrDetailsList(self,portion=1):
-        listIngrDetails = []
-        for ing_name, values in self.ingredientsRecipe.items():
-            amount = values.get('amount')*portion
-            unit = values.get('unit')
-            ingr = IngredientDict[ing_name.replace(" ","").upper()]
-            kcal = ingr.getKcal(amount,unit)
-            prot = ingr.getProt(amount,unit)
-            listIngrDetails.append({ing_name.replace(" ","").upper(): {'amount':amount, 
-                                                        'unit':unit,
-                                                        'kcal': round(kcal,2) ,
-                                                        'prot': round(prot,2)
-                                                        }
-                                    })
-            
-        return listIngrDetails
-        # print(ing_name, amount, unit, kcal, prot)
-        # print(IngredientDict[ing_name.upper()] )
     
         # Recipe Functions
     def toDataFrameRows(self, portion=1):
@@ -322,192 +104,6 @@ class Recipe:
             })
         # print (rows)
         return rows
-
-
-def searchIngrInIngrList(search_term):
-    text =''
-    found = False
-    times =0
-    for key in IngredientDict:
-        if search_term.replace(" ","").upper() in key.replace(" ","").upper():
-            if not found:
-                text += f'{key}'
-                times +=1
-                found = True
-            else:   
-                text += f', {key}'
-                times+= 1
-    text = f'Found "{search_term}" {times} time(s) in ingredient list in: ' + text
-
-    if found:
-        print(text)
-    else:
-        print(f'There are no ingredients yet with {search_term} in the description.')
-def searchRecipInRecipList(search_term):
-    text =''
-    found = False
-    times =0
-    for key in RecipeDict:
-        if search_term.replace(" ","").upper() in key.replace(" ","").upper():
-            if not found:
-                text += f'{key}'
-                times +=1
-                found = True
-            else:   
-                text += f', {key}'
-                times+= 1
-    text = f'Found "{search_term}" {times} time(s) in recipe list in: ' + text
-
-    if found:
-        print(text)
-    else:
-        print(f'There are no recipes yet with {search_term} in the description.')
-def searchIngrInRecipList(search_term):
-    text =''
-    for key,value in RecipeDict.items():
-        textRecipe = ''
-        times=0
-        found=False
-        for ingr_name in RecipeDict[key].getIngrList():
-            if search_term.replace(" ","").upper() in ingr_name.replace(" ","").upper():
-                if found:
-                    textRecipe += f', {ingr_name}'
-                    times +=1
-                else: 
-                    textRecipe += f'{ingr_name}'
-                    found = True
-                    times +=1
-        if found:
-            textRecipe = f'For recipe {key}, "{search_term}" has been found {times} time(s) in ingredients: {textRecipe}\n'
-        text += textRecipe
-    if text:
-        print(text)
-    else:
-        print(f'There are no recipes yet with an ingredient with {search_term} in the description.')
-def searchIngrDetailsInRecipList(search_term):
-    text =''
-    for key,value in RecipeDict.items():
-        textRecipe = ''
-        times=0
-        found=False
-        for ingr_name in RecipeDict[key].getIngrList():
-            if search_term.replace(" ","").upper() in ingr_name.replace(" ","").upper():
-                if found:
-                    textRecipe  += f', {ingr_name}'
-                    times +=1
-                else: 
-                    textRecipe += f'{ingr_name}'
-                    found = True
-                    times +=1
-
-                listDetails = RecipeDict[key].getIngrDetailsList() #Get the details per ingredient found
-                for ingrlistDetail in listDetails:
-                    for keyIngrListDetail, valueIngrListDetail in ingrlistDetail.items():
-                        if keyIngrListDetail.replace(" ","").upper() == ingr_name.replace(" ","").upper():
-                            textRecipe += f' ( {valueIngrListDetail.get("amount")} {valueIngrListDetail.get("unit").replace("u","UNIT")} )'
-
-        if found:
-            textRecipe = f'For recipe "{key}", "{search_term}" has been found in ingredients {times} time(s): {textRecipe}\n'
-        text += textRecipe
-    if text:
-        print(text)
-    else:
-        print(f'There are no recipes yet with an ingredient with {search_term} in the description.')
-
-
-def getGroceryList(combine = 0, recipes = [] ):
-    
-    all_rows = []  # List of rows to build a DataFrame
-
-    textAll =''
-    if combine==0:
-        for recipe in recipes:
-            textRec =''
-            rec_name = recipe.get('name')
-            rec_portion = recipe.get('portion')
-
-            # Put all ingredients with details , each a dictionary, into a list for that recipe
-            listIngr = RecipeDict[rec_name].getIngrDetailsList(rec_portion)
-            textRec  = f'------------------------------------------------------------------------\n'
-            textRec += f'Recipe: {rec_name} for {rec_portion} portion(s)\n'
-            textRec += f'------------------------------------------------------------------------\n'
-            
-            # Get each ingredient for recipe
-            for ingr in listIngr:
-                for ingr_name, ingr_values in ingr.items():
-                    row = {
-                        'Recipe': rec_name,
-                        'Portion': rec_portion,
-                        'Ingredient': ingr_name,
-                        'IngredientKey': ingr_name.replace(" ","").upper(),
-                        'Amount': round(ingr_values.get('amount'), 2),
-                        'Unit': ingr_values.get('unit'),
-                        'Kcal': round(ingr_values.get('kcal'), 1),
-                        'Prot': round(ingr_values.get('prot'), 1)
-                    }
-                    all_rows.append(row)
-                    textAll += (f'Ingredient: {row["Ingredient"]}     Amount: {row["Amount"]} {row["Unit"]}       '
-                               f'Kcal: {row["Kcal"]}      Prot: {row["Prot"]}  \n')
-
-        # print(textAll)
-        df0 = pd.DataFrame(all_rows)#.sort_values(by='Recipe')
-        return df0
-
-    else:
-        combined_ingredients = defaultdict(lambda: {'amount': 0, 'unit': '', 'kcal': 0, 'prot': 0})
-
-        for recipe in recipes:
-            rec_name = recipe.get('name')
-            rec_portion = recipe.get('portion')
-            # Put all ingredients with details , each a dictionary, into a list for that recipe
-            listIngr = RecipeDict[rec_name].getIngrDetailsList(rec_portion)
-
-            # Get each ingredient for recipe
-            for ingr in listIngr:
-                for ingr_name, ingr_values in ingr.items():
-                    ingr_name_upper = ingr_name.replace(" ","").upper()
-                    current_unit = ingr_values['unit']
-
-                    if combined_ingredients[ingr_name_upper]['unit'] in ('', current_unit):
-                        combined_ingredients[ingr_name_upper]['amount'] += ingr_values['amount']
-                        combined_ingredients[ingr_name_upper]['kcal'] += ingr_values['kcal']
-                        combined_ingredients[ingr_name_upper]['prot'] += ingr_values['prot']
-                        combined_ingredients[ingr_name_upper]['unit'] = current_unit
-
-        for name, values in combined_ingredients.items():
-            all_rows.append({
-                'Ingredient': name,
-                'Amount': round(values['amount'], 2),
-                'Unit': values['unit'],
-                'Kcal': round(values['kcal'], 1),
-                'Prot': round(values['prot'], 1)
-            })
-        # Convert to dataframe
-        df1 = pd.DataFrame(all_rows).sort_values(by='Ingredient')
-
-        # Print formatted text
-        textAll = '------------------------------------------------------------------------\n'
-        textAll += 'Combined Grocery List:\n'
-        textAll += '------------------------------------------------------------------------\n'
-        for _, row in df1.iterrows():
-            textAll += (f'Ingredient: {row["Ingredient"]}     Amount: {row["Amount"]} {row["Unit"]}       '
-                        f'Kcal: {row["Kcal"]}      Prot: {row["Prot"]}  \n')
-        # print(textAll)
-
-        return df1
-
-def exportGroceryListToExcel(recipes):
-  # Get the DataFrames
-    df_combined = getGroceryList(combine=1, recipes=recipes)     # Combined totals
-    df_detailed = getGroceryList(combine=0, recipes=recipes)     # Per recipe
-  
-    # Export to one Excel file with two sheets
-    filename = f'grocery_list_{today}.xlsx'
-    
-
-    with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-        df_combined.to_excel(writer, sheet_name='Combined', index=False)
-        df_detailed.to_excel(writer, sheet_name='Per Recipe', index=False)
 
 
 
@@ -544,10 +140,6 @@ def getIngrKcalPerUnit(ingredient):
 def getIngrProtPerUnit(ingredient):
     ingredient = getIngr(ingredient)
     return  float(ingredient.prot_unit)
-
-def getIngrProtPer100kcal(ingredient):
-    ingredient = getIngr(ingredient)
-    return  float(ingredient.protPer100Kcal)
 
 def getIngrKcal(ingredient, amount=0, unitOrGram='g'):
         if is_number(amount):
@@ -593,8 +185,6 @@ def getRecipeIngr(name):
 def getRecipeLabel(recipe_name):
     key = recipe_name.replace(" ", "").upper()
     return RecipeDict[key].getLabel() if key in RecipeDict else recipe_name
-
-# print(getRecipeIngr('baguette') )
 
 def getRecipeKcal(name, portion=1):
     total_kcal = 0
@@ -726,5 +316,3 @@ def load_data_from_excel(filepath):
     load_recipes_from_excel(filepath)
  
 load_data_from_excel("./Excel_files/data.xlsx") #Grocery_list\Excel_files\data.xlsx
-
-# load_data_from_excel(DATA_FILE) 
