@@ -422,8 +422,24 @@ if page == "Grocery List Maker":
         log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
 
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            combined.to_excel(writer, index=False, sheet_name="Combined")
-            pd.concat(concatDF, ignore_index=True).to_excel(writer, index=False, sheet_name="Per Recipe")
+            any_written = False
+        
+            if not combined.empty:
+                combined.to_excel(writer, index=False, sheet_name="Combined")
+                any_written = True
+        
+            if concatDF:
+                per_recipe_df = pd.concat(concatDF, ignore_index=True)
+                if not per_recipe_df.empty:
+                    per_recipe_df.to_excel(writer, index=False, sheet_name="Per Recipe")
+                    any_written = True
+        
+            if not any_written:
+                pd.DataFrame({"Message": ["No data to export"]}).to_excel(writer, index=False, sheet_name="Info")
+                
+        # with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        #     combined.to_excel(writer, index=False, sheet_name="Combined")
+        #     pd.concat(concatDF, ignore_index=True).to_excel(writer, index=False, sheet_name="Per Recipe")
 
         # Save to disk
         with open(file_path, "wb") as f:
