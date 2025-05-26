@@ -367,7 +367,6 @@ if page == "Grocery List Maker":
 
     st.button("➕ Add Extra Ingredient", on_click=add_extra_row, key="add_extra_bottom")
 
-    st.sidebar.subheader("Display Options")
     tab1, tab2 = st.tabs(["All Ingredients", "Per Recipe"])
   
     # output_mode = st.sidebar.radio("Export the recipes?", ["View Here", "Export to Excel"])
@@ -426,7 +425,8 @@ if page == "Grocery List Maker":
         has_data = True
 
     if has_data:
-        if st.button("Export to Excel"):
+        st.sidebar.subheader("Display Options")
+        if st.sidebar.button("Export to Excel"):
           
             buffer = io.BytesIO()
             today = date.today().isoformat()
