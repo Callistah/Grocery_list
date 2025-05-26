@@ -427,6 +427,11 @@ if page == "Grocery List Maker":
     if has_data:
             st.sidebar.subheader("Display Options")
             # if st.sidebar.button("Export to Excel"):
+            buffer = io.BytesIO()
+            today = date.today().isoformat()
+            file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
+            log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
+      
             st.sidebar.download_button(
                     label="Download Excel File",
                     data=buffer.getvalue(),
@@ -434,10 +439,10 @@ if page == "Grocery List Maker":
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
           
-            buffer = io.BytesIO()
-            today = date.today().isoformat()
-            file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
-            log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
+            # buffer = io.BytesIO()
+            # today = date.today().isoformat()
+            # file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
+            # log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
     
             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
                 any_written = False
