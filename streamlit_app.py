@@ -420,7 +420,7 @@ if page == "Grocery List Maker":
   # Determine if there's data to export
     has_data = False
     
-    if not combined.empty:
+    if not df_export.empty:
         has_data = True
     if not concatDF.empty or not per_recipe_df.empty:
         has_data = True
