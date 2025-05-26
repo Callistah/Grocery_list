@@ -438,10 +438,6 @@ if page == "Grocery List Maker":
                 pd.DataFrame({"Message": ["No data to export"]}).to_excel(writer, index=False, sheet_name="Info")
                 st.warning("No data to export. Please select some recipes or add ingredients.")
                 
-        # with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        #     combined.to_excel(writer, index=False, sheet_name="Combined")
-        #     pd.concat(concatDF, ignore_index=True).to_excel(writer, index=False, sheet_name="Per Recipe")
-
         # Save to disk
         with open(file_path, "wb") as f:
             f.write(buffer.getvalue())
@@ -468,6 +464,8 @@ if page == "Grocery List Maker":
         with pd.ExcelWriter(log_file_path, engine='openpyxl', mode='w') as log_writer:
             updated_per_recipe_log.to_excel(log_writer, index=False, sheet_name='Log Per Recipe')
             updated_combined_log.to_excel(log_writer, index=False, sheet_name='Log Combined')
+        if not any_written:
+            st.warning("Nothing to export. Please select some recipes or add ingredients.")
 
 # --- DATA ANALYSIS PAGE (to be implemented) ---
 elif page == "Data Analysis":
