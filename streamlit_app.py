@@ -168,7 +168,6 @@ if page == "Grocery List Maker":
                 )
               
                 # New: Add a text field for recipe notes
-                st.text_input('Test Text Input')
                 note_key = f'note_{recipe}'
                 note_value = st.text_input(f"Notes for {RecipeDict[recipe].getLabel()}", value=st.session_state.get(note_key, ""), key=note_key)
                 st.session_state[note_key] = note_value
