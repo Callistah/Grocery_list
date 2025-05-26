@@ -432,13 +432,6 @@ if page == "Grocery List Maker":
             file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
             log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
       
-            st.sidebar.download_button(
-                    label="Download Excel File",
-                    data=buffer.getvalue(),
-                    file_name=f"Grocery_List_{today}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-          
             # buffer = io.BytesIO()
             # today = date.today().isoformat()
             # file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
@@ -462,6 +455,13 @@ if page == "Grocery List Maker":
                     st.warning("No data to export. Please select some recipes or add ingredients.")
     
             buffer.seek(0)
+
+            st.sidebar.download_button(
+                    label="Download Excel File",
+                    data=buffer.getvalue(),
+                    file_name=f"Grocery_List_{today}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
             # Save to disk
             with open(file_path, "wb") as f:
                 f.write(buffer.getvalue())
