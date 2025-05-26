@@ -369,7 +369,8 @@ if page == "Grocery List Maker":
 
     st.sidebar.subheader("Display Options")
     tab1, tab2 = st.tabs(["All Ingredients", "Per Recipe"])
-    output_mode = st.sidebar.radio("Export the recipes?", ["View Here", "Export to Excel"])
+  
+    # output_mode = st.sidebar.radio("Export the recipes?", ["View Here", "Export to Excel"])
 
     all_data = []
     concatDF = []
@@ -415,7 +416,18 @@ if page == "Grocery List Maker":
                     st.dataframe(df.set_index('Ingredient'), use_container_width=True)
 
     # Export Ingredients and Recipes to one file, separate tabs
-    if output_mode == "Export to Excel":
+    # if output_mode == "Export to Excel":
+  # Determine if there's data to export
+    has_data = False
+    
+    if not combined.empty:
+        has_data = True
+    if not concatDF.empty or not per_recipe_df.empty:
+        has_data = True
+
+    if has_data:
+        if st.button("Export to Excel"):
+      
         buffer = io.BytesIO()
         today = date.today().isoformat()
         file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
