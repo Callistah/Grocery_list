@@ -157,15 +157,26 @@ if page == "Grocery List Maker":
                               key=f'chk_{recipe}', 
                               value=default_use)
             if use:
+                cols = st.columns([1, 3])  # 1/3 width split (adjust if needed)
                 default_portion = max(st.session_state.selected_recipes.get(recipe, 1),1)
-                portion = st.number_input(
-                    f"Portion for {RecipeDict[recipe].getLabel()}",
-                    min_value=0,
-                    max_value=100000,
-                    value=default_portion,
-                    step=1,
-                    key=f'portion_{recipe}'
-                )
+                with cols[0]:
+                    portion = st.number_input(
+                        f"Portion for {RecipeDict[recipe].getLabel()}",
+                        min_value=0,
+                        max_value=100000,
+                        value=default_portion,
+                        step=1,
+                        key=f'portion_{recipe}'
+                    )
+                
+                with cols[1]:
+                    note_key = f'note_{recipe}'
+                    st.text_input(
+                        "Notes",  # Shorter label to save space
+                        value=st.session_state.get(note_key, ""),
+                        key=note_key
+                    )
+              
                 st.session_state.selected_recipes[recipe] = portion
             else:
                 st.session_state.selected_recipes.pop(recipe, None)
@@ -356,9 +367,9 @@ if page == "Grocery List Maker":
 
     st.button("➕ Add Extra Ingredient", on_click=add_extra_row, key="add_extra_bottom")
 
-    st.sidebar.subheader("Display Options")
     tab1, tab2 = st.tabs(["All Ingredients", "Per Recipe"])
-    output_mode = st.sidebar.radio("Export the recipes?", ["View Here", "Export to Excel"])
+  
+    # output_mode = st.sidebar.radio("Export the recipes?", ["View Here", "Export to Excel"])
 
     all_data = []
     concatDF = []
@@ -366,9 +377,11 @@ if page == "Grocery List Maker":
     for recipe, portion in selected.items():
         data = RecipeDict[recipe].toDataFrameRows(portion)
         df = pd.DataFrame(data)
+        note = st.session_state.get(f'note_{recipe}', "")  # Get the note for this recipe
         df_export = df.copy()
         df_export.insert(0, 'Recipe', recipe.ljust(12))
         df_export.insert(1, 'Portion', portion)
+        df_export['Notes'] = note  # This will apply the same note to all rows of this recipe
         concatDF.append(df_export)
 
     # Tabs
@@ -402,42 +415,82 @@ if page == "Grocery List Maker":
                     st.dataframe(df.set_index('Ingredient'), use_container_width=True)
 
     # Export Ingredients and Recipes to one file, separate tabs
-    if output_mode == "Export to Excel":
-        buffer = io.BytesIO()
-        today = date.today().isoformat()
-        file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
-        log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
+    # if output_mode == "Export to Excel":
+  # Determine if there's data to export
+    has_data = False
+    
+    if 'all_data' in globals() and isinstance(all_data, pd.DataFrame):
+        has_data = True
+    if 'concatDF' in globals() and isinstance(concatDF, pd.DataFrame):
+        has_data = True
 
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            combined.to_excel(writer, index=False, sheet_name="Combined")
-            pd.concat(concatDF, ignore_index=True).to_excel(writer, index=False, sheet_name="Per Recipe")
+    if has_data:
+            st.sidebar.subheader("Display Options")
+            # if st.sidebar.button("Export to Excel"):
+            buffer = io.BytesIO()
+            today = date.today().isoformat()
+            file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
+            log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
+      
+            # buffer = io.BytesIO()
+            # today = date.today().isoformat()
+            # file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
+            # log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
+    
+            with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                any_written = False
+            
+                if not combined.empty:
+                    combined.to_excel(writer, index=False, sheet_name="Combined")
+                    any_written = True
+            
+                if concatDF:
+                    per_recipe_df = pd.concat(concatDF, ignore_index=True)
+                    if not per_recipe_df.empty:
+                        per_recipe_df.to_excel(writer, index=False, sheet_name="Per Recipe")
+                        any_written = True
+            
+                if not any_written:
+                    pd.DataFrame({"Message": ["No data to export"]}).to_excel(writer, index=False, sheet_name="Info")
+                    st.warning("No data to export. Please select some recipes or add ingredients.")
+    
+            buffer.seek(0)
 
-        # Save to disk
-        with open(file_path, "wb") as f:
-            f.write(buffer.getvalue())
+            st.sidebar.download_button(
+                    label="Download Excel File",
+                    data=buffer.getvalue(),
+                    file_name=f"Grocery_List_{today}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            # Save to disk
+            with open(file_path, "wb") as f:
+                f.write(buffer.getvalue())
+    
+            # st.sidebar.download_button(
+            #     label="Download Excel File",
+            #     data=buffer.getvalue(),
+            #     file_name=f"Grocery_List_{today}.xlsx",
+            #     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            #     )
+    
+            per_recipe_log = pd.concat(concatDF, ignore_index=True)
+            per_recipe_log['ExportDate'] = today
+            combined_log = combined.copy()
+            combined_log['ExportDate'] = today
+    
+            if os.path.exists(log_file_path):
+                updated_per_recipe_log = pd.concat([all_prev_per_recipe_log, per_recipe_log], ignore_index=True)
+                updated_combined_log = pd.concat([all_prev_combined_log, combined_log], ignore_index=True)
+            else:
+                updated_per_recipe_log = per_recipe_log
+                updated_combined_log = combined_log
+    
+            with pd.ExcelWriter(log_file_path, engine='openpyxl', mode='w') as log_writer:
+                updated_per_recipe_log.to_excel(log_writer, index=False, sheet_name='Log Per Recipe')
+                updated_combined_log.to_excel(log_writer, index=False, sheet_name='Log Combined')
+            if not any_written:
+                st.warning("Nothing to export. Please select some recipes or add ingredients.")
 
-        st.sidebar.download_button(
-            label="Download Excel File",
-            data=buffer.getvalue(),
-            file_name=f"Grocery_List_{today}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        per_recipe_log = pd.concat(concatDF, ignore_index=True)
-        per_recipe_log['ExportDate'] = today
-        combined_log = combined.copy()
-        combined_log['ExportDate'] = today
-
-        if os.path.exists(log_file_path):
-            updated_per_recipe_log = pd.concat([all_prev_per_recipe_log, per_recipe_log], ignore_index=True)
-            updated_combined_log = pd.concat([all_prev_combined_log, combined_log], ignore_index=True)
-        else:
-            updated_per_recipe_log = per_recipe_log
-            updated_combined_log = combined_log
-
-        with pd.ExcelWriter(log_file_path, engine='openpyxl', mode='w') as log_writer:
-            updated_per_recipe_log.to_excel(log_writer, index=False, sheet_name='Log Per Recipe')
-            updated_combined_log.to_excel(log_writer, index=False, sheet_name='Log Combined')
 
 # --- DATA ANALYSIS PAGE (to be implemented) ---
 elif page == "Data Analysis":
