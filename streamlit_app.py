@@ -157,25 +157,25 @@ if page == "Grocery List Maker":
                               key=f'chk_{recipe}', 
                               value=default_use)
             if use:
-              cols = st.columns([1, 3])  # 1/3 width split (adjust if needed)
-              default_portion = max(st.session_state.selected_recipes.get(recipe, 1),1)
-              with cols[0]:
-                  portion = st.number_input(
-                      f"Portion for {RecipeDict[recipe].getLabel()}",
-                      min_value=0,
-                      max_value=100000,
-                      value=default_portion,
-                      step=1,
-                      key=f'portion_{recipe}'
-                  )
-              
-              with cols[1]:
-                  note_key = f'note_{recipe}'
-                  st.text_input(
-                      "Notes",  # Shorter label to save space
-                      value=st.session_state.get(note_key, ""),
-                      key=note_key
-                  )
+                cols = st.columns([1, 3])  # 1/3 width split (adjust if needed)
+                default_portion = max(st.session_state.selected_recipes.get(recipe, 1),1)
+                with cols[0]:
+                    portion = st.number_input(
+                        f"Portion for {RecipeDict[recipe].getLabel()}",
+                        min_value=0,
+                        max_value=100000,
+                        value=default_portion,
+                        step=1,
+                        key=f'portion_{recipe}'
+                    )
+                
+                with cols[1]:
+                    note_key = f'note_{recipe}'
+                    st.text_input(
+                        "Notes",  # Shorter label to save space
+                        value=st.session_state.get(note_key, ""),
+                        key=note_key
+                    )
                 # default_portion = max(st.session_state.selected_recipes.get(recipe, 1),1)
                 # portion = st.number_input(
                 #     f"Portion for {RecipeDict[recipe].getLabel()}",
