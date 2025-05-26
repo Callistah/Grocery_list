@@ -436,6 +436,7 @@ if page == "Grocery List Maker":
         
             if not any_written:
                 pd.DataFrame({"Message": ["No data to export"]}).to_excel(writer, index=False, sheet_name="Info")
+                st.warning("No data to export. Please select some recipes or add ingredients.")
                 
         # with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         #     combined.to_excel(writer, index=False, sheet_name="Combined")
