@@ -166,6 +166,12 @@ if page == "Grocery List Maker":
                     step=1,
                     key=f'portion_{recipe}'
                 )
+              
+                # New: Add a text field for recipe notes
+                note_key = f'note_{recipe}'
+                note_value = st.text_input(f"Notes for {RecipeDict[recipe].getLabel()}", value=st.session_state.get(note_key, ""), key=note_key)
+                st.session_state[note_key] = note_value
+              
                 st.session_state.selected_recipes[recipe] = portion
             else:
                 st.session_state.selected_recipes.pop(recipe, None)
