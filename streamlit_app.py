@@ -426,16 +426,10 @@ if page == "Grocery List Maker":
 
     if has_data:
             st.sidebar.subheader("Display Options")
-            # if st.sidebar.button("Export to Excel"):
             buffer = io.BytesIO()
             today = date.today().isoformat()
             file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
             log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
-      
-            # buffer = io.BytesIO()
-            # today = date.today().isoformat()
-            # file_path = f'.\Excel_files\Export\Grocery_List_{today}.xlsx'
-            # log_file_path = '.\Excel_files\Log\Grocery_List_Log.xlsx'
     
             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
                 any_written = False
@@ -465,31 +459,27 @@ if page == "Grocery List Maker":
             # Save to disk
             with open(file_path, "wb") as f:
                 f.write(buffer.getvalue())
+
+
+            if 'concatDF' in globals() and isinstance(concatDF, pd.DataFrame):
+                per_recipe_log = pd.concat(concatDF, ignore_index=True)
+                per_recipe_log['ExportDate'] = today
+                
+                combined_log = combined.copy()
+                combined_log['ExportDate'] = today
     
-            # st.sidebar.download_button(
-            #     label="Download Excel File",
-            #     data=buffer.getvalue(),
-            #     file_name=f"Grocery_List_{today}.xlsx",
-            #     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            #     )
-    
-            per_recipe_log = pd.concat(concatDF, ignore_index=True)
-            per_recipe_log['ExportDate'] = today
-            combined_log = combined.copy()
-            combined_log['ExportDate'] = today
-    
-            if os.path.exists(log_file_path):
-                updated_per_recipe_log = pd.concat([all_prev_per_recipe_log, per_recipe_log], ignore_index=True)
-                updated_combined_log = pd.concat([all_prev_combined_log, combined_log], ignore_index=True)
-            else:
-                updated_per_recipe_log = per_recipe_log
-                updated_combined_log = combined_log
-    
-            with pd.ExcelWriter(log_file_path, engine='openpyxl', mode='w') as log_writer:
-                updated_per_recipe_log.to_excel(log_writer, index=False, sheet_name='Log Per Recipe')
-                updated_combined_log.to_excel(log_writer, index=False, sheet_name='Log Combined')
-            if not any_written:
-                st.warning("Nothing to export. Please select some recipes or add ingredients.")
+                if os.path.exists(log_file_path):
+                    updated_per_recipe_log = pd.concat([all_prev_per_recipe_log, per_recipe_log], ignore_index=True)
+                    updated_combined_log = pd.concat([all_prev_combined_log, combined_log], ignore_index=True)
+                else:
+                    updated_per_recipe_log = per_recipe_log
+                    updated_combined_log = combined_log
+        
+                with pd.ExcelWriter(log_file_path, engine='openpyxl', mode='w') as log_writer:
+                    updated_per_recipe_log.to_excel(log_writer, index=False, sheet_name='Log Per Recipe')
+                    updated_combined_log.to_excel(log_writer, index=False, sheet_name='Log Combined')
+                if not any_written:
+                    st.warning("Nothing to export. Please select some recipes or add ingredients.")
 
 
 # --- DATA ANALYSIS PAGE (to be implemented) ---
