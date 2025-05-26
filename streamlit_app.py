@@ -176,19 +176,6 @@ if page == "Grocery List Maker":
                         value=st.session_state.get(note_key, ""),
                         key=note_key
                     )
-                # default_portion = max(st.session_state.selected_recipes.get(recipe, 1),1)
-                # portion = st.number_input(
-                #     f"Portion for {RecipeDict[recipe].getLabel()}",
-                #     min_value=0,
-                #     max_value=100000,
-                #     value=default_portion,
-                #     step=1,
-                #     key=f'portion_{recipe}'
-                # )
-              
-                # # New: Add a text field for recipe notes
-                # note_key = f'note_{recipe}'
-                # note_value = st.text_input(f"Notes for {RecipeDict[recipe].getLabel()}", value=st.session_state.get(note_key, ""), key=note_key)
               
                 st.session_state.selected_recipes[recipe] = portion
             else:
@@ -390,9 +377,11 @@ if page == "Grocery List Maker":
     for recipe, portion in selected.items():
         data = RecipeDict[recipe].toDataFrameRows(portion)
         df = pd.DataFrame(data)
+        note = st.session_state.get(f'note_{recipe}', "")  # Get the note for this recipe
         df_export = df.copy()
         df_export.insert(0, 'Recipe', recipe.ljust(12))
         df_export.insert(1, 'Portion', portion)
+        df_export['Notes'] = note  # This will apply the same note to all rows of this recipe
         concatDF.append(df_export)
 
     # Tabs
