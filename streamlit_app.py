@@ -420,9 +420,9 @@ if page == "Grocery List Maker":
   # Determine if there's data to export
     has_data = False
     
-    if not all_data.empty:
+    if 'all_data' in globals() and isinstance(all_data, pd.DataFrame):
         has_data = True
-    if not concatDF.empty or not per_recipe_df.empty:
+    if 'concatDF' in globals() and isinstance(concatDF, pd.DataFrame):
         has_data = True
 
     if has_data:
