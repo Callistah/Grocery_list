@@ -425,14 +425,14 @@ if page == "Grocery List Maker":
         has_data = True
 
     if has_data:
-        st.sidebar.subheader("Display Options")
-        # if st.sidebar.button("Export to Excel"):
-        if st.sidebar.download_button(
-                label="Download Excel File",
-                data=buffer.getvalue(),
-                file_name=f"Grocery_List_{today}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                ):
+            st.sidebar.subheader("Display Options")
+            # if st.sidebar.button("Export to Excel"):
+            st.sidebar.download_button(
+                    label="Download Excel File",
+                    data=buffer.getvalue(),
+                    file_name=f"Grocery_List_{today}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
           
             buffer = io.BytesIO()
             today = date.today().isoformat()
