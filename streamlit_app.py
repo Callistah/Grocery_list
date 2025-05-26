@@ -426,7 +426,13 @@ if page == "Grocery List Maker":
 
     if has_data:
         st.sidebar.subheader("Display Options")
-        if st.sidebar.button("Export to Excel"):
+        # if st.sidebar.button("Export to Excel"):
+        if st.sidebar.download_button(
+                label="Download Excel File",
+                data=buffer.getvalue(),
+                file_name=f"Grocery_List_{today}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ):
           
             buffer = io.BytesIO()
             today = date.today().isoformat()
@@ -455,12 +461,12 @@ if page == "Grocery List Maker":
             with open(file_path, "wb") as f:
                 f.write(buffer.getvalue())
     
-            st.sidebar.download_button(
-                label="Download Excel File",
-                data=buffer.getvalue(),
-                file_name=f"Grocery_List_{today}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+            # st.sidebar.download_button(
+            #     label="Download Excel File",
+            #     data=buffer.getvalue(),
+            #     file_name=f"Grocery_List_{today}.xlsx",
+            #     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            #     )
     
             per_recipe_log = pd.concat(concatDF, ignore_index=True)
             per_recipe_log['ExportDate'] = today
