@@ -664,7 +664,8 @@ elif page == "Data Analysis":
             selected_recipes = st.multiselect(
                 "Select Recipe(s) to highlight:",
                 options=all_recipes,
-                default=[])
+                default=[],
+                key="select_recipe_visual2")
 
         # Filter recipe_ts by selected recipes
         recipe_ts_filtered = recipe_ts[recipe_ts["RecipeLabel"].isin(selected_recipes)]
@@ -791,7 +792,8 @@ elif page == "Data Analysis":
             selected_recipes = st.multiselect(
             "Select Recipe(s) to highlight:",
             options=all_recipes,
-            default=[])
+            default=[],
+            key="select_recipe_visual4")
 
         # Filter the top_recipes_result based on selected recipes
         filtered_recipes_result = scatter_data[scatter_data['RecipeLabel'].isin(selected_recipes)]
@@ -856,7 +858,8 @@ elif page == "Data Analysis":
             selected_recipes = st.multiselect(
             "Select Recipe(s) to highlight:",
             options=all_recipes,
-            default=[]
+            default=[],
+            key="select_recipe_visual8"
             )
 
         # Filter the top_recipes_result based on selected recipes
@@ -919,7 +922,8 @@ elif page == "Data Analysis":
             selected_recipes = st.multiselect(
             "Select Recipe(s) to highlight:",
             options=all_recipes,
-            default=[]
+            default=[],
+            key="select_recipe_visual3"
             )
 
         # Filter the top_recipes_result based on selected recipes
@@ -996,7 +1000,8 @@ elif page == "Data Analysis":
             selected_recipes = st.multiselect(
             "Select Recipe(s) to highlight:",
             options=all_recipes,
-            default=[]
+            default=[],
+            key="select_recipe_visual6"
             )
 
         # Filter the top_recipes_result based on selected recipes
@@ -1069,7 +1074,8 @@ elif page == "Data Analysis":
             selected_recipes = st.multiselect(
             "Select Recipe(s) to highlight:",
             options=all_recipes,
-            default=[]
+            default=[],
+            key="select_recipe_visual7"
             )
 
         # Filter the top_recipes_result based on selected recipes
@@ -1154,7 +1160,8 @@ elif page == "Data Analysis":
             selected_recipes = st.multiselect(
             "Select Recipe(s) to highlight:",
             options=all_recipes,
-            default=[]
+            default=[],
+            key="select_recipe_visual9"
             )
         radar_df = radar_df.dropna(subset=["RecipeProtPer100Kcal", "RecipeKcal1Port", "UniqueIngredients", "AvgPortionsPerSave"])
         
